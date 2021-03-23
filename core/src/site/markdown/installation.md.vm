@@ -1,0 +1,24 @@
+
+# Installation
+
+Paprika has to be installed as a [Maven extension](http://maven.apache.org/studies/extension-demo/): create a file `.mvn/extensions.xml` at the root directory of the (multi-modules) project with the following content:
+```
+<extensions xmlns="http://maven.apache.org/EXTENSIONS/1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/EXTENSIONS/1.0.0 http://maven.apache.org/xsd/core-extensions-1.0.0.xsd">
+
+  <extension>
+    <groupId>io.github.atos-digital-id</groupId>
+    <artifactId>paprika-maven-plugin</artifactId>
+    <version>${project.version}</version>
+  </extension>
+
+</extensions>
+```
+
+Then replace every version of the projects contained in the multi-modules project in your pom files with `#[[${paprika}]]#`:
+
+ * in the `<version>` tag if it exists (so, if the project has no parent or if the parent is not in the multi-module project),
+ * in every `<parent>/<version>`, `<dependency>/<version>`, `<plugin>/<version>`, `<reportPlugin>/<version>` or `<extension>/<version>` sections, if the dependency is build in the same multi-module project.
+
+## vim: set syntax=markdown :**

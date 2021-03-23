@@ -1,0 +1,9 @@
+package com.$package;
+
+public class FooBar {
+
+  public static void main( String ... args ) {
+    System.out.println( "Hello World! V$inc" );
+  }
+
+}

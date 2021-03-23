@@ -1,0 +1,3 @@
+#foreach( $prop in $props.keySet )
+$prop=$props.get($prop)
+#end

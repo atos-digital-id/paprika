@@ -1,0 +1,53 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+#if( $parent != $null )
+  <parent>
+    <groupId>com.paprika-test</groupId>
+    <artifactId>$parent</artifactId>
+    <version>${paprika}</version>
+  </parent>
+
+#else
+  <groupId>com.paprika-test</groupId>
+#end
+  <artifactId>$name</artifactId>
+#if( $parent == $null )
+  <version>${paprika}</version>
+#end
+#if( $packaging != "jar" )
+  <packaging>$packaging</packaging>
+#end
+
+  <name>$name.$inc project</name>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+  </properties>
+
+#if( !$modules.isEmpty() )
+  <modules>
+#foreach( $module in $modules )
+    <module>$module</module>
+#end
+  </modules>
+
+#end
+#if( !$dependencies.isEmpty() )
+  <dependencies>
+#foreach( $dependency in $dependencies )
+    <dependency>
+      <groupId>com.paprika-test</groupId>
+      <artifactId>$dependency</artifactId>
+      <version>${paprika}</version>
+    </dependency>
+#end
+  </dependencies>
+
+#end
+</project>

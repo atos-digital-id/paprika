@@ -1,0 +1,42 @@
+<project xmlns="http://maven.apache.org/DECORATION/1.6.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/DECORATION/1.6.0 http://maven.apache.org/xsd/decoration-1.6.0.xsd">
+
+  <skin>
+    <groupId>org.apache.maven.skins</groupId>
+    <artifactId>maven-fluido-skin</artifactId>
+    <version>1.9</version>
+  </skin>
+
+  <custom>
+    <fluidoSkin>
+      <sourceLineNumbersEnabled>true</sourceLineNumbersEnabled>
+      <skipGenerationDate>true</skipGenerationDate>
+      <gitHub>
+        <projectId>atos-digital-id/paprika</projectId>
+        <ribbonOrientation>right</ribbonOrientation>
+        <ribbonColor>red</ribbonColor>
+      </gitHub>
+    </fluidoSkin>
+  </custom>
+
+  <version position="none"/>
+  <publishDate position="none"/>
+
+  <body>
+
+    <menu name="Overview">
+      <item name="Introduction" href="index.html"/>
+      <item name="Installation" href="installation.html"/>
+      <item name="How it works" href="how_it_works.html"/>
+      <item name="Configuration" href="configuration.html"/>
+      <item name="Goals" href="plugin-info.html"/>
+      <item name="Tutorial" href="tutorial.html"/>
+      <item name="License" href="https://www.gnu.org/licenses/lgpl-3.0-standalone.html"/>
+    </menu>
+
+    <menu ref="reports"/>
+
+  </body>
+
+</project>

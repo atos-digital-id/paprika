@@ -1,0 +1,48 @@
+
+# Configuration
+
+The configuration files can be placed in `.mvn/paprika.properties` in the root project or in in any module directory. Each configuration entry is applied in all sub-modules, unless another file overload this configuration value for a specific module and its sub-module. Each configuration file should be in a [properties format](#[[http://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Properties.html#load(java.io.Reader)]]#). The available keys and the default values are:
+
+Key | Default value | Description
+--- | --- | ---
+`initVersion` | `0.1.0` | First version when no tag is found (without pre-release parts).
+`observedPath` | `pom.xml:.mvn/**:src/main/**` | Observed paths of each module for modification. Always use `/` to separate directories. See wildcards support.
+`nonQualifierBranches` | `main:master` | Branch names for which snapshot versions will not contain the branch name. See wildcards support.
+`reproducible` | `true` | Set the Maven property `project.build.outputTimestamp` with the date of the last modification commit.
+`release.annotated` | `true` | `release` goal: generate annotated tag commands.
+`release.lastModification` | `true` | `release` goal: propose the last modification commit (instead of `HEAD`).
+`release.message` | `Release #[[${artifactId}]]# #[[${version}]]#` | `release` goal: proposed message in annotated tag commands. See the next section to know the available placeholders.
+`release.signed` | `false` | `release` goal: if annotated, generate signed tag commands.
+`release.ignore` | `false` | `release` goal: skip this module (can be used for [test modules](http://www.thinkcode.se/blog/2012/08/21/separating-tests-in-maven)).
+
+#[[## Message placeholders]]#
+
+In `release.message`, some placeholders are available:
+
+ * `#[[${groupId}]]#`: the group id of the released module.
+ * `#[[${artifactId}]]#`: the artifact id of the released module.
+ * `#[[${packaging}]]#`: the packaging of the module.
+ * `#[[${parent.groupId}]]#`: the group id of the parent module (if any).
+ * `#[[${parent.artifactId}]]#`: the artifact id of the parent module (if any).
+ * `#[[${parent.packaging}]]#`: the packaging of the parent module (if any).
+ * `#[[${version}]]#`: the version that should be used for the release.
+ * `#[[${lastCommit}]]#`: the last commit id (SHA1) bringing a modification in the module.
+ * `#[[${lastCommit.short}]]#`: a shortened (9 characters) version of `#[[${lastCommit}]]#`.
+ * `#[[${lastModification}]]#`: the date of the commit designated by `#[[${lastCommit}]]#`.
+ * `#[[${previousVersion}]]#`: the last tagged version (or the configured `initVersion`).
+
+#[[## Wildcards support]]#
+
+Some configuration values can be defined as a list of matching elements. In this case, the following characters have a special meanings:
+
+Character | Meaning
+--- | ---
+`\` | Next character escaping (the next character is not interpreted)
+`:` | List separator
+`?` | Any single character
+`*` | Any sequence of characters, but the character `/`
+`**` | Any sequence of characters, including `/`
+`!` | If starting a matching part, exclude the match from the result (e.g. `**:!.gitignore` means all files excluding `.gitignore`)
+
+
+## vim: set syntax=markdown :**

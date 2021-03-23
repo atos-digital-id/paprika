@@ -1,0 +1,28 @@
+
+# About Paprika Maven Plugin
+
+Paprika is a Maven plugin which computes version numbers based on the tags and history of Git, in a multi-module context.
+
+#[[## Major links]]#
+
+ * [Installation page](installation.html)
+ * [How Paprika works](how_it_works.html)
+ * [Configuration of Paprika](configuration.html)
+ * [The `release` goal](release-mojo.html)
+ * [A complete tutorial](tutorial.html)
+
+#[[## Why we created Paprika?]]#
+
+The multi/mono-repository debate is, at least, an active subject in Internet. The blog entries which can be found are very opinionated, with a lot a sad and great back stories, advices issued for painful experiences, and describe the pros and cons of one solution over the other. Generally, we can cite in favor of the monorepo several usage conveniences: it's simpler to understand for new developers hired on the project (only one checkout), the code can be factorized and reorganized more easily, an adapted build system can handle the compilation order and build all libraries from scratch, the peer reviewing for features implying modification on several libraries is sanitized and doesn't look like a treasure hunt designed by Satan. On the other hand, the multi-repositories organization is not without advantages: each project has its own life cycle and release schedule, dependencies are clearly marked, and the code separation limits the coupling between projects. In fact, a multirepo organization seems more aligned with a micro-service architecture.
+
+The fact is we need to choose one way, and find how compensate the implied problems. That's how different tools have been designed for one approach or the other. We can cite [Gita](http://github.com/nosarthur/gita), [repo](http://github.com/GerritCodeReview/git-repo) or [git-multirepo](http://github.com/fortinmike/git-multirepo) to manage several Git repositories side by side. [Awesome Monorepo](http://github.com/korfuri/awesome-monorepo) is a listing of products which can be used in a monorepo context. [Lerna](http://github.com/lerna/lerna) is a dedicated tool for javascript projects to package projects versionned in a monorepo. It's interesting to notice that [Bazel](http://bazel.build/) build tool is designed for monorepo and is advertised in that way.
+
+Our opinion on that subject is that **Git repositories should reflect team organization first**. If you have several projects but several teams (stable, with an important turnover or even ephemeral) and each project is managed, planned and released separately, then each project should have a dedicated Git repository. On the contrary, if anybody in a team can develop a feature on any project, or if feature requests are expressed across several projects, a _mono-repository_, containing at least every projects that could be impacted, should be more adapted.
+
+With that spirit, and more related to the Java world, the [Maven project aggregation](http://maven.apache.org/guides/introduction/introduction-to-the-pom.html#project-aggregation) (multi-modules) feature has proved to be a great solution to manage several related libraries by unifying the building operations. That kind of organization is used by some major projects, such as [Quartz](http://github.com/quartz-scheduler/quartz), [Jenkins](http://github.com/jenkinsci/jenkins) or [Guice](http://github.com/google/guice). Although each module can have its own version number, and so its own release life cycle, it seems that tools (and usage) tend to unify the version number to all modules. Since the management of version number across all the file of the multi-module project is a little cumbersome, some tools have been created to simplify the release process. [Versions maven plugin](http://www.mojohaus.org/versions-maven-plugin/) can modify the Maven files (`pom.xml`) with the wanted version number. [maven git commit id plugin](http://github.com/git-commit-id/git-commit-id-maven-plugin), [Maven Git Versioning Extension](http://github.com/qoomon/maven-git-versioning-extension) and [jgitver-maven-plugin](http://github.com/jgitver/jgitver-maven-plugin) get the last Git tag and inject accordingly a version number during the Maven execution.
+
+But all theses tools compute only one version number, injected in all modules of the project. That behavior is not compliant with the precepts and the good practices of a micro-service architecture, specially when the project grows and the number of services increases: with the strict respect of [Semantic Versioning](http://semver.org/), potentially each module should be independently released. That's mean that a module can be patched and released without releasing unrelated modules. Or a service can introduce major updates and break some backward compatibilities and so the next release should increase the major number in the version, but other services (e.g. upstream or not related) should not be released in the same time and, at the very least, keep their major number.
+
+It's to address this problem, keeping the version significant in a multi-module project, that we have created Paprika.
+
+## vim: set syntax=markdown :**

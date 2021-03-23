@@ -1,0 +1,8 @@
+
+# java build
+target/
+bin/
+
+# asymptote figures
+core/src/site/resources/images/asy/
+
