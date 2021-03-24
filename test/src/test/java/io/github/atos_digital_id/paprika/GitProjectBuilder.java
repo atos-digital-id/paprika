@@ -24,6 +24,8 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.PersonIdent;
 
+import io.github.atos_digital_id.paprika.project.ArtifactDefProvider;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
 
@@ -165,6 +167,51 @@ public class GitProjectBuilder implements AutoCloseable {
 
   }
 
+  public static final String GROUP_ID = "com.paprika-test";
+
+  @Data
+  public static class Dep {
+
+    private final String groupId;
+
+    private final String artifactId;
+
+    private final String version;
+
+    public Dep( @NonNull String groupId, @NonNull String artifactId, @NonNull String version ) {
+      this.groupId = groupId;
+      this.artifactId = artifactId;
+      this.version = version;
+    }
+
+    public Dep( String artifactId ) {
+      this( GROUP_ID, artifactId, ArtifactDefProvider.VERSION_PLACEHOLDER );
+    }
+
+  }
+
+  @Data
+  public static class Plugin {
+
+    @NonNull
+    private final String groupId;
+
+    @NonNull
+    private final String artifactId;
+
+    @NonNull
+    private final String version;
+
+    @NonNull
+    private final Map<String, String> configuration;
+
+    private final String phase;
+
+    @NonNull
+    private final String goal;
+
+  }
+
   public void pom(
       @NonNull String path,
       @NonNull String name,
@@ -172,7 +219,8 @@ public class GitProjectBuilder implements AutoCloseable {
       String parent,
       @NonNull String packaging,
       @NonNull List<String> modules,
-      @NonNull List<String> dependencies ) throws IOException {
+      @NonNull List<Dep> dependencies,
+      @NonNull List<Plugin> plugins ) throws IOException {
 
     Map<String, Object> context = new HashMap<>();
     context.put( "name", name );
@@ -181,6 +229,7 @@ public class GitProjectBuilder implements AutoCloseable {
     context.put( "packaging", packaging );
     context.put( "modules", modules );
     context.put( "dependencies", dependencies );
+    context.put( "plugins", plugins );
 
     write( resolve( path, "pom.xml" ), "templates/pom.template", context );
 

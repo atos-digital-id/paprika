@@ -43,7 +43,7 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
 
   public static final String TIMESTAMP_PROPERTY = "project.build.outputTimestamp";
 
-  private static final String PHASE = "prepare-package";
+  private static final String PHASE = "validate";
 
   @Inject
   private PaprikaLogger logger;
@@ -65,20 +65,23 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
 
   @Override
   public Model read( File input, Map<String, ?> options ) throws IOException {
-    return updateModel( super.read( input, options ) );
+    return updateModel( super.read( input, options ), options );
   }
 
   @Override
   public Model read( Reader input, Map<String, ?> options ) throws IOException {
-    return updateModel( setPom( super.read( input, options ), options ) );
+    return updateModel( super.read( input, options ), options );
   }
 
   @Override
   public Model read( InputStream input, Map<String, ?> options ) throws IOException {
-    return updateModel( setPom( super.read( input, options ), options ) );
+    return updateModel( super.read( input, options ), options );
   }
 
-  private Model setPom( Model model, Map<String, ?> options ) {
+  private Model updateModel( Model model, Map<String, ?> options ) throws IOException {
+
+    if( !isPaprikaVersion( model ) )
+      return model;
 
     Source source = (Source) options.get( ModelProcessor.SOURCE );
     if( source != null ) {
@@ -86,15 +89,6 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
       if( pom.isFile() )
         model.setPomFile( pom );
     }
-
-    return model;
-
-  }
-
-  private Model updateModel( Model model ) throws IOException {
-
-    if( !isPaprikaVersion( model ) )
-      return model;
 
     ArtifactDef def = artifactDefProvider.getDef( model );
 

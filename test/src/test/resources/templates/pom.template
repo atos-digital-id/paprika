@@ -42,12 +42,44 @@
   <dependencies>
 #foreach( $dependency in $dependencies )
     <dependency>
-      <groupId>com.paprika-test</groupId>
-      <artifactId>$dependency</artifactId>
-      <version>${paprika}</version>
+      <groupId>$dependency.groupId</groupId>
+      <artifactId>$dependency.artifactId</artifactId>
+      <version>$dependency.version</version>
     </dependency>
 #end
   </dependencies>
 
 #end
+  <build>
+
+#if( !$plugins.isEmpty() )
+  <plugins>
+#foreach( $plugin in $plugins )
+      <plugin>
+        <groupId>$plugin.groupId</groupId>
+        <artifactId>$plugin.artifactId</artifactId>
+        <version>$plugin.version</version>
+        <configuration>
+#foreach( $entry in $plugin.configuration.entrySet() )
+          <$entry.key>$entry.value</entry.key>
+#end
+        </configuration>
+        <executions>
+          <execution>
+            <id>$plugin.goal</id>
+#if( $plugin.phase != $null )
+            <phase>$plugin.phase</phase>
+#end
+            <goals>
+              <goal>$plugin.goal</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+#end
+  </plugins>
+
+#end
+  </build>
+
 </project>
