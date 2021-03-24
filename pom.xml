@@ -5,7 +5,7 @@
 
   <groupId>io.github.atos-digital-id</groupId>
   <artifactId>paprika-parent</artifactId>
-  <version>0.1.0</version>
+  <version>${paprika}</version>
 
   <packaging>pom</packaging>
 

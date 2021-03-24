@@ -6,14 +6,13 @@
   <parent>
     <groupId>io.github.atos-digital-id</groupId>
     <artifactId>paprika-parent</artifactId>
-    <version>0.1.0</version>
+    <version>${paprika}</version>
   </parent>
 
   <artifactId>paprika-maven-plugin</artifactId>
   <packaging>maven-plugin</packaging>
 
   <name>Paprika Maven Plugin</name>
-  <version>0.2.0</version>
 
   <description>Paprika is a Maven plugin which computes version numbers based on the tags and history of Git, in a multi-module context.</description>
   <url>https://atos-digital-id.github.io/paprika/</url>
