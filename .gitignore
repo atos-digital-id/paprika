@@ -6,3 +6,6 @@ bin/
 # asymptote figures
 core/src/site/resources/images/asy/
 
+# doc site
+docs/
+
