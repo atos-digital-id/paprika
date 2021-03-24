@@ -26,13 +26,13 @@ jobs:
     - name: Build
       run: >
         mvn -B -ntp clean install \
-          "-Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}" \
           "-Dhttp.keepAlive=false" \
           "-Dmaven.wagon.http.pool=false" \
           "-Dmaven.wagon.httpconnectionManager.ttlSeconds=120"
     - name: Publish
       run: >
-        mvn -B -ntp deploy --pl core \
+        mvn -B -ntp deploy --pl core -Dsign=active \
+          "-Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}" \
           "-Dhttp.keepAlive=false" \
           "-Dmaven.wagon.http.pool=false" \
           "-Dmaven.wagon.httpconnectionManager.ttlSeconds=120"

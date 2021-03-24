@@ -18,6 +18,10 @@
   <description>Paprika is a Maven plugin which computes version numbers based on the tags and history of Git, in a multi-module context.</description>
   <url>https://atos-digital-id.github.io/paprika/</url>
 
+  <properties>
+    <gpg.skip>true</gpg.skip>
+  </properties>
+
   <licenses>
     <license>
       <name>GNU Lesser General Public License v3.0 or later</name>
@@ -270,5 +274,24 @@
     </plugins>
 
   </reporting>
+
+  <profiles>
+
+    <profile>
+      <id>gpg-signature</id>
+      <activation>
+        <property>
+          <name>sign</name>
+          <value>active</value>
+        </property>
+      </activation>
+
+      <properties>
+        <gpg.skip>false</gpg.skip>
+      </properties>
+
+    </profile>
+
+  </profiles>
 
 </project>
