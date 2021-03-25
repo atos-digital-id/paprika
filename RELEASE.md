@@ -11,6 +11,10 @@ Tag commits:
 ```bash
 mvn paprika:release exec=true
 ```
+Push tags:
+```bash
+git push --tags
+```
 
 ## Build and deploy
 
