@@ -33,7 +33,7 @@ jobs:
           "-Dmaven.wagon.httpconnectionManager.ttlSeconds=120"
     - name: Publish
       run: >
-        mvn -B -ntp deploy --pl core -Dsign=active \
+        mvn -B -ntp deploy -DskipTests -Dsign=active \
           "-Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}" \
           "-Dhttp.keepAlive=false" \
           "-Dmaven.wagon.http.pool=false" \

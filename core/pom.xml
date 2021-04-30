@@ -19,6 +19,8 @@
 
   <properties>
     <gpg.skip>true</gpg.skip>
+    <maven.deploy.skip>false</maven.deploy.skip>
+    <maven.site.skip>false</maven.site.skip>
   </properties>
 
   <licenses>
@@ -197,25 +199,6 @@
       </plugin>
 
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>flatten-maven-plugin</artifactId>
-        <version>1.2.7</version>
-        <configuration>
-          <flattenMode>ossrh</flattenMode>
-          <outputDirectory>${project.build.directory}</outputDirectory>
-        </configuration>
-        <executions>
-          <execution>
-            <id>flatten</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>flatten</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
         <version>3.9.1</version>
@@ -288,6 +271,31 @@
       <properties>
         <gpg.skip>false</gpg.skip>
       </properties>
+
+      <build>
+        <plugins>
+
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>flatten-maven-plugin</artifactId>
+            <version>1.2.7</version>
+            <configuration>
+              <flattenMode>ossrh</flattenMode>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+            </configuration>
+            <executions>
+              <execution>
+                <id>flatten</id>
+                <phase>process-resources</phase>
+                <goals>
+                  <goal>flatten</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+        </plugins>
+      </build>
 
     </profile>
 

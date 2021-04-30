@@ -12,8 +12,13 @@
   <name>Paprika Parent</name>
 
   <properties>
+
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.build.outputTimestamp>2004-01-01T00:00:00Z</project.build.outputTimestamp>
+
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <maven.site.skip>true</maven.site.skip>
+
   </properties>
 
   <modules>
