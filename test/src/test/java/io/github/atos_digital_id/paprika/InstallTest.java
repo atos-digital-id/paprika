@@ -307,4 +307,40 @@ public class InstallTest {
 
   }
 
+  @Test
+  public void testDetachedTargetedHead() throws Exception {
+
+    git.readme( ".", 0 );
+    git.pom( ".", "alpha", 0, null, "jar", asList(), asList(), asList() );
+    git.java( ".", 0, "alpha" );
+    git.commit( "Init commit" );
+    git.tag( "alpha/1.0.0" );
+    git.branch( "feature/my-great-feature" );
+    git.java( ".", 1, "alpha" );
+    String commit = git.commit( "New alpha" );
+    git.checkout( commit );
+
+    install( new ArtifactResult( "alpha", "1.1.0-SNAPSHOT.feature-my-great-feature", "jar" ) );
+
+  }
+
+  @Test
+  public void testDetachedHead() throws Exception {
+
+    git.readme( ".", 0 );
+    git.pom( ".", "alpha", 0, null, "jar", asList(), asList(), asList() );
+    git.java( ".", 0, "alpha" );
+    git.commit( "Init commit" );
+    git.tag( "alpha/1.0.0" );
+    git.branch( "feature/my-great-feature" );
+    git.java( ".", 1, "alpha" );
+    String commit = git.commit( "New alpha" );
+    git.java( ".", 2, "alpha" );
+    git.commit( "Another new alpha" );
+    git.checkout( commit );
+
+    install( new ArtifactResult( "alpha", "1.1.0-SNAPSHOT." + commit, "jar" ) );
+
+  }
+
 }

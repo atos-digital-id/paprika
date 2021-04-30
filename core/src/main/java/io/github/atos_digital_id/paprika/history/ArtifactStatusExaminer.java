@@ -142,9 +142,12 @@ public class ArtifactStatusExaminer {
 
     prereleases.add( Version.SNAPSHOT );
 
-    String branch = gitHandler.branch();
-    if( configHandler.get( def ).isQualifiedBranch( branch ) )
-      prereleases.add( protectBranchName( branch ) );
+    List<String> branches = gitHandler.branches();
+    boolean qualified = !branches.isEmpty();
+    for( String branch : branches )
+      qualified &= configHandler.get( def ).isQualifiedBranch( branch );
+    if( qualified )
+      prereleases.add( protectBranchName( branches.get( 0 ) ) );
 
     int major = lastTaggedVersion.getMajor();
     int minor = lastTaggedVersion.getMinor();

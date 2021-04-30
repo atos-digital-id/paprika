@@ -22,7 +22,9 @@ import org.apache.velocity.app.Velocity;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
+import org.eclipse.jgit.revwalk.RevCommit;
 
 import io.github.atos_digital_id.paprika.project.ArtifactDefProvider;
 import lombok.Data;
@@ -263,15 +265,16 @@ public class GitProjectBuilder implements AutoCloseable {
         TimeZone.getTimeZone( date.getZone() ) );
   }
 
-  public void commit( @NonNull String message, @NonNull ZonedDateTime date )
+  public String commit( @NonNull String message, @NonNull ZonedDateTime date )
       throws GitAPIException {
     git.add().addFilepattern( "." ).call();
-    git.commit().setAuthor( jimmy( date ) ).setCommitter( jimmy( date ) ).setMessage( message )
-        .call();
+    RevCommit commit = git.commit().setAuthor( jimmy( date ) ).setCommitter( jimmy( date ) )
+        .setMessage( message ).call();
+    return ObjectId.toString( commit );
   }
 
-  public void commit( @NonNull String message ) throws GitAPIException {
-    commit( message, DEFAULT_DATE );
+  public String commit( @NonNull String message ) throws GitAPIException {
+    return commit( message, DEFAULT_DATE );
   }
 
   public void tag( @NonNull String tag, @NonNull String message, @NonNull ZonedDateTime date )
@@ -290,6 +293,10 @@ public class GitProjectBuilder implements AutoCloseable {
 
   public void branch( @NonNull String branch ) throws GitAPIException {
     git.checkout().setCreateBranch( true ).setName( branch ).call();
+  }
+
+  public void checkout( @NonNull String name ) throws GitAPIException {
+    git.checkout().setName( name ).call();
   }
 
 }
