@@ -255,7 +255,7 @@ Also the command can be used with the option `--pl`, to focus about the release 
 [INFO]
 ```
 
-The goal can also execute the displayed command by adding the option `-Dexec=true`. We let you judge the dangerousness of this convenient option, and imagine what can happens if you blindly run it without check what will be tagged.
+The goal can also execute the displayed command by adding the option `-Dexec`. We let you judge the dangerousness of this convenient option, and imagine what can happens if you blindly run it without check what will be tagged.
 
 Finally, the proposed commands will always seek what are the last commits modifying each module, and so the tags can be applied on different commits. To demonstrate that, let's create a modification on `beta` (without branching this time):
 ```bash
@@ -264,7 +264,7 @@ sed -i 's/Hello/Good bye/' beta/src/main/java/com/hypatia/App.java
 git commit -am "[I] That's all folks\!"
 
 # I am the danger
-mvn paprika:release -Dexec=true
+mvn paprika:release -Dexec
 ```
 ![exec](images/asy/tuto_release_goal_exec.svg)
 
