@@ -2,15 +2,13 @@ package io.github.atos_digital_id.paprika;
 
 import static org.eclipse.jgit.lib.Constants.HEAD;
 import static org.eclipse.jgit.lib.Constants.R_HEADS;
+import static org.eclipse.jgit.lib.Constants.R_REMOTES;
 import static org.eclipse.jgit.lib.Repository.shortenRefName;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -49,7 +47,7 @@ public class GitHandler extends AbstractMavenLifecycleParticipant {
 
   private Git git;
 
-  private List<String> branches;
+  private String branch;
 
   private ObjectId head;
 
@@ -84,45 +82,50 @@ public class GitHandler extends AbstractMavenLifecycleParticipant {
     logger.log( "Head commit: {}", Pretty.id( head ) );
 
     // Current branch
-    if( head == null ) {
+    branch = currentBranch();
+    logger.log( "Current branches: {}", branch );
 
-      branches = Collections.emptyList();
+  }
 
-    } else {
-      try {
+  private String currentBranch() throws MavenExecutionException {
 
-        Ref headRef = repository.getRefDatabase().exactRef( HEAD );
-        if( headRef.isSymbolic() ) {
-          // HEAD target a branch
+    if( head == null )
+      return "";
 
-          branches = Collections.singletonList( shortenRefName( headRef.getTarget().getName() ) );
+    try {
 
-        } else {
-          // detached HEAD. Guess if a branch is targeted
+      Ref headRef = repository.getRefDatabase().exactRef( HEAD );
 
-          List<String> foundBranches = new ArrayList<>();
+      // HEAD target a branch
+      if( headRef.isSymbolic() )
+        return shortenRefName( headRef.getTarget().getName() );
 
-          for( Ref ref : repository.getRefDatabase().getRefsByPrefix( R_HEADS ) ) {
-            ObjectId target = ref.getLeaf().getObjectId();
-            if( head.equals( target ) )
-              foundBranches.add( shortenRefName( ref.getName() ) );
-          }
+      // detached HEAD. Guess if a branch is targeted
 
-          // No targeted branch
-          if( foundBranches.isEmpty() )
-            foundBranches.add( shortenRefName( head.getName() ) );
-
-          Collections.sort( foundBranches );
-
-          branches = Collections.unmodifiableList( foundBranches );
-
+      for( Ref ref : repository.getRefDatabase().getRefsByPrefix( R_HEADS ) ) {
+        ObjectId target = ref.getLeaf().getObjectId();
+        if( head.equals( target ) ) {
+          String shortened = shortenRefName( ref.getName() );
+          if( !HEAD.equals( shortened ) )
+            return shortened;
         }
-
-      } catch( IOException ex ) {
-        throw new MavenExecutionException( "Can't find current branch: " + ex.getMessage(), ex );
       }
+
+      for( Ref ref : repository.getRefDatabase().getRefsByPrefix( R_REMOTES ) ) {
+        ObjectId target = ref.getLeaf().getObjectId();
+        if( head.equals( target ) ) {
+          String shortened = repository.shortenRemoteBranchName( ref.getName() );
+          if( !HEAD.equals( shortened ) )
+            return shortened;
+        }
+      }
+
+      // No targeted branch
+      return shortenRefName( head.getName() );
+
+    } catch( IOException ex ) {
+      throw new MavenExecutionException( "Can't find current branch: " + ex.getMessage(), ex );
     }
-    logger.log( "Current branches: {}", branches );
 
   }
 
@@ -218,8 +221,8 @@ public class GitHandler extends AbstractMavenLifecycleParticipant {
    *
    * @return the current Git branch names.
    **/
-  public List<String> branches() {
-    return checkinit( this.branches );
+  public String branch() {
+    return checkinit( this.branch );
   }
 
   /**
