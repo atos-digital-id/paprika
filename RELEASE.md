@@ -9,7 +9,7 @@ mvn paprika:release
 ```
 Tag commits:
 ```bash
-mvn paprika:release exec=true
+mvn paprika:release -Dexec
 ```
 Push tags:
 ```bash
@@ -32,10 +32,11 @@ git push --tags
 
 Run:
 ```bash
-checkout docs
-rebase --strategy-option=theirs main
-./generate_site.sh
-git add docs
+git checkout main
+rm -rf docs && ./generate_site.sh
+git checkout docs
+git rebase --strategy-option=theirs main
+git add -f docs
 git commit --amend --no-edit
 git push --force
 git checkout main
