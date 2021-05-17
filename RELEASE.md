@@ -32,10 +32,9 @@ git push --tags
 
 Run:
 ```bash
-git checkout main
-rm -rf docs && ./generate_site.sh
 git checkout docs
 git rebase --strategy-option=theirs main
+rm -rf docs && ./generate_site.sh
 git add -f docs
 git commit --amend --no-edit
 git push --force
