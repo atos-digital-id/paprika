@@ -6,12 +6,8 @@ import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.TimeZone;
 
 import javax.inject.Inject;
@@ -28,13 +24,10 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import io.github.atos_digital_id.paprika.GitHandler;
 import io.github.atos_digital_id.paprika.config.ConfigHandler;
 import io.github.atos_digital_id.paprika.project.ArtifactDef;
-import io.github.atos_digital_id.paprika.project.ArtifactDefProvider;
 import io.github.atos_digital_id.paprika.project.ArtifactTags;
 import io.github.atos_digital_id.paprika.utils.Pretty;
 import io.github.atos_digital_id.paprika.utils.cache.ArtifactIdCache;
-import io.github.atos_digital_id.paprika.utils.cache.ArtifactIdHistoryCache;
 import io.github.atos_digital_id.paprika.utils.cache.HashMapArtifactIdCache;
-import io.github.atos_digital_id.paprika.utils.cache.HashMapArtifactIdHistoryCache;
 import io.github.atos_digital_id.paprika.utils.log.PaprikaLogger;
 import io.github.atos_digital_id.paprika.version.Version;
 import io.github.atos_digital_id.paprika.version.VersionParsingException;
@@ -55,9 +48,6 @@ public class ArtifactStateProvider {
   private PaprikaLogger logger;
 
   @Inject
-  private ArtifactDefProvider artifactDefProvider;
-
-  @Inject
   private ArtifactCheckers artifactCheckers;
 
   @Inject
@@ -68,12 +58,6 @@ public class ArtifactStateProvider {
 
   @Inject
   private ArtifactTags artifactTags;
-
-  private final ArtifactIdHistoryCache<LastModifState> lastModifCache =
-      new HashMapArtifactIdHistoryCache<>();
-
-  private final ArtifactIdHistoryCache<LastTagState> lastTagCache =
-      new HashMapArtifactIdHistoryCache<>();
 
   private LastModifState dirty() {
     return new LastModifState( 0, ZERO_ID, HEAD, gitHandler.startTime() );
@@ -183,8 +167,6 @@ public class ArtifactStateProvider {
     return cache.get( def, () -> internalGet( def ) );
   }
 
-  private final Set<ObjectId> allTags = new HashSet<>();
-
   private LastModifAndTagState internalGet( ArtifactDef def ) {
 
     logger.reset( "State of {}: ", def );
@@ -237,10 +219,6 @@ public class ArtifactStateProvider {
         lastModifState = depLastModifState;
       }
 
-      // to be cached
-      List<RevCommit> lastModifCacheTargets = new LinkedList<>();
-      List<RevCommit> lastTagCacheTargets = new LinkedList<>();
-
       revWalk.setFirstParent( true );
       revWalk.markStart( head );
 
@@ -253,16 +231,6 @@ public class ArtifactStateProvider {
         ObjectId id = revWalk.peel( revObj ).getId();
         tagsMap.put( id, ref );
       }
-
-      // get all tags of all defs, if not already done
-      if( allTags.isEmpty() )
-        for( ArtifactDef d : artifactDefProvider.getAllDefs() ) {
-          for( Ref ref : artifactTags.getTags( d ) ) {
-            RevObject revObj = revWalk.parseAny( ref.getObjectId() );
-            ObjectId id = revWalk.peel( revObj ).getId();
-            allTags.add( id );
-          }
-        }
 
       // loop on each commits
 
@@ -277,62 +245,27 @@ public class ArtifactStateProvider {
         logger.stack( "Check commit {}: ", Pretty.id( current ) );
         try {
 
-          // check last modif cache
-          if( lastModifState == null ) {
-            Optional<LastModifState> cachedLastModif = lastModifCache.peek( def, current );
-            if( cachedLastModif.isPresent() ) {
-              lastModifState = cachedLastModif.get();
-              logger.log( "Get last modif from cache" );
-            }
-          }
-
-          // check last tag cache
-          if( lastTagState == null ) {
-            Optional<LastTagState> cachedLastTag = lastTagCache.peek( def, current );
-            if( cachedLastTag.isPresent() ) {
-              lastTagState = cachedLastTag.get();
-              logger.log( "Get last tag from cache" );
-            }
-          }
-
-          // append to 'to be cached' lists
-          if( allTags.contains( current ) ) {
-            if( lastModifState == null )
-              lastModifCacheTargets.add( current );
-            lastTagCacheTargets.add( current );
-          }
-
           // tagged?
           if( lastTagState == null && tagsMap.containsKey( current ) ) {
 
             lastTagState = tagged( def, current, tagsMap.get( current ) );
-            lastTagCache.set( def, lastTagCacheTargets, lastTagState );
-
             logger.log( "Tagged with {}", lastTagState.getRefName() );
 
-            if( lastModifState == null ) {
+            if( lastModifState == null )
               lastModifState = lastModif( currentSeniority, current );
-              lastModifCache.set( def, lastModifCacheTargets, lastModifState );
-            }
 
           }
 
           // dependency modified?
           if( lastModifState == null && currentSeniority == depLastModifSeniority ) {
-
             lastModifState = depLastModifState;
-            lastModifCache.set( def, lastModifCacheTargets, lastModifState );
             logger.log( "Modified dependency: {}", depLastModif );
-
           }
 
           // modified?
           if( lastModifState == null && checker.isModifiedAt( revWalk, current ) ) {
-
             lastModifState = lastModif( currentSeniority, current );
-            lastModifCache.set( def, lastModifCacheTargets, lastModifState );
             logger.log( "Modified" );
-
           }
 
           // everything's found?
@@ -352,12 +285,10 @@ public class ArtifactStateProvider {
       logger.log( "Never tagged" );
 
       lastTagState = neverTagged( def );
-      lastTagCache.set( def, lastTagCacheTargets, lastTagState );
 
       if( lastModifState == null ) {
         // should not happen
         lastModifState = lastModif( currentSeniority, current );
-        lastModifCache.set( def, lastModifCacheTargets, lastModifState );
       }
 
       return new LastModifAndTagState( lastModifState, lastTagState );
