@@ -14,6 +14,14 @@ import lombok.NonNull;
 public class LastModifState {
 
   /**
+   * Seniority of the last modification. Number of commit between HEAD and the
+   * last modification commit, 0 if dirty.
+   *
+   * @return the seniority.
+   **/
+  private final int seniority;
+
+  /**
    * Commit id of the last modification.
    *
    * @return the commit id.

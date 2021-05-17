@@ -23,6 +23,7 @@ import org.apache.maven.model.Parent;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.io.ModelReader;
 
+import io.github.atos_digital_id.paprika.PaprikaBuildInfo;
 import io.github.atos_digital_id.paprika.utils.ModelWalker;
 import io.github.atos_digital_id.paprika.utils.ModelWalker.GAV;
 import io.github.atos_digital_id.paprika.utils.Pretty;
@@ -91,6 +92,9 @@ public class ArtifactDefProvider {
 
   @Inject
   private PaprikaLogger logger;
+
+  @Inject
+  private PaprikaBuildInfo paprikaBuildInfo;
 
   @Inject
   private ModelReader modelReader;
@@ -162,11 +166,21 @@ public class ArtifactDefProvider {
 
         Set<ArtifactId> dependencies = new HashSet<>();
         modelWalker.visitModel( model, gav -> {
+
+          // exclude model itself and parent
           if( gav.getUsage() == MODEL || gav.getUsage() == PARENT )
             return;
+
+          // ugly but the 'recursive' build of paprika need it
+          if( id.getGroupId().equals( paprikaBuildInfo.getGroupId() )
+              && gav.getGroupId().equals( paprikaBuildInfo.getGroupId() )
+              && gav.getArtifactId().equals( paprikaBuildInfo.getArtifactId() ) )
+            return;
+
           ArtifactId gavId = gav.id();
           if( force.contains( gavId ) || isPaprikaVersion( gav ) )
             dependencies.add( gavId );
+
         } );
         logger.log( "dependencies: {}", Pretty.coll( dependencies ) );
 

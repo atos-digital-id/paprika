@@ -74,25 +74,7 @@ public class ArtifactStatusExaminer {
     try {
 
       LastModifAndTagState state = artifactStateProvider.get( def );
-
-      // search last modif in dependencies
-
       LastModifState lastModif = state.getLastModif();
-      int seniority = state.getSeniority();
-
-      if( seniority > 0 )
-        for( ArtifactDef dependency : def.getAllDependencies() ) {
-
-          LastModifAndTagState depState = artifactStateProvider.get( dependency );
-          if( seniority > depState.getSeniority() ) {
-            lastModif = depState.getLastModif();
-            seniority = depState.getSeniority();
-          }
-
-          if( seniority == 0 )
-            break;
-
-        }
 
       // examine
 
@@ -108,7 +90,7 @@ public class ArtifactStatusExaminer {
 
       for( ArtifactDef dependency : def.getAllDependencies() ) {
         if( examine( dependency ).isSnapshot() ) {
-          logger.log( "Dependency modified: {}", dependency );
+          logger.log( "Modified dependency: {}", dependency );
           return snapshotStatus( def, state, lastModif );
         }
       }

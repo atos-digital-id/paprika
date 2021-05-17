@@ -76,18 +76,19 @@ public class ArtifactStateProvider {
       new HashMapArtifactIdHistoryCache<>();
 
   private LastModifState dirty() {
-    return new LastModifState( ZERO_ID, HEAD, gitHandler.startTime() );
+    return new LastModifState( 0, ZERO_ID, HEAD, gitHandler.startTime() );
   }
 
-  private LastModifState lastModif( ObjectId lastMatchCommit ) {
+  private LastModifState lastModif( int seniority, ObjectId lastMatchCommit ) {
 
     if( !ZERO_ID.equals( lastMatchCommit ) && ( lastMatchCommit instanceof RevCommit ) )
       return new LastModifState(
+          seniority,
           lastMatchCommit,
           Pretty.id( lastMatchCommit ).toString(),
           extractDate( (RevCommit) lastMatchCommit ) );
 
-    return new LastModifState( lastMatchCommit, HEAD, gitHandler.startTime() );
+    return new LastModifState( seniority, lastMatchCommit, HEAD, gitHandler.startTime() );
 
   }
 
@@ -135,13 +136,6 @@ public class ArtifactStateProvider {
    **/
   @Data
   public static class LastModifAndTagState {
-
-    /**
-     * Number of commits between HEAD and the last modification.
-     *
-     * @return the seniority of the last modification.
-     **/
-    private final int seniority;
 
     /**
      * Last modification state.
@@ -204,7 +198,7 @@ public class ArtifactStateProvider {
       ObjectId headId = gitHandler.head();
       // no commits yet
       if( headId == null || ZERO_ID.equals( headId ) )
-        return new LastModifAndTagState( 0, dirty(), neverTagged( def ) );
+        return new LastModifAndTagState( dirty(), neverTagged( def ) );
 
       RevCommit head = revWalk.parseCommit( headId );
 
@@ -212,6 +206,35 @@ public class ArtifactStateProvider {
       if( checker.isDirty( revWalk, head ) ) {
         logger.log( "Dirty working dir" );
         lastModifState = dirty();
+      }
+
+      // get most recent modification of a dependency
+      ArtifactDef depLastModif = null;
+      LastModifState depLastModifState = null;
+      int depLastModifSeniority = Integer.MAX_VALUE;
+      if( lastModifState == null ) {
+        for( ArtifactDef dependency : def.getAllDependencies() ) {
+
+          LastModifAndTagState depState = get( dependency );
+          LastModifState depModifState = depState.getLastModif();
+          int depSeniority = depModifState.getSeniority();
+
+          if( depLastModifSeniority > depSeniority ) {
+            depLastModif = dependency;
+            depLastModifState = depModifState;
+            depLastModifSeniority = depSeniority;
+          }
+
+          if( depLastModifSeniority == 0 )
+            break;
+
+        }
+      }
+
+      // test dirty dependency
+      if( depLastModifSeniority == 0 ) {
+        logger.log( "Dirty dependency: {}", depLastModif );
+        lastModifState = depLastModifState;
       }
 
       // to be cached
@@ -243,7 +266,6 @@ public class ArtifactStateProvider {
 
       // loop on each commits
 
-      int foundSeniority = -1;
       int currentSeniority = 0;
 
       RevCommit current = revWalk.next();
@@ -289,35 +311,33 @@ public class ArtifactStateProvider {
             logger.log( "Tagged with {}", lastTagState.getRefName() );
 
             if( lastModifState == null ) {
-              lastModifState = lastModif( current );
+              lastModifState = lastModif( currentSeniority, current );
               lastModifCache.set( def, lastModifCacheTargets, lastModifState );
             }
 
-            if( foundSeniority == -1 )
-              foundSeniority = currentSeniority;
+          }
+
+          // dependency modified?
+          if( lastModifState == null && currentSeniority == depLastModifSeniority ) {
+
+            lastModifState = depLastModifState;
+            lastModifCache.set( def, lastModifCacheTargets, lastModifState );
+            logger.log( "Modified dependency: {}", depLastModif );
 
           }
 
           // modified?
           if( lastModifState == null && checker.isModifiedAt( revWalk, current ) ) {
 
-            lastModifState = lastModif( current );
+            lastModifState = lastModif( currentSeniority, current );
             lastModifCache.set( def, lastModifCacheTargets, lastModifState );
             logger.log( "Modified" );
 
-            foundSeniority = currentSeniority;
-
           }
 
-          // found seniority?
-          if( foundSeniority == -1
-              && lastModifState != null
-              && current.equals( lastModifState.getId() ) )
-            foundSeniority = currentSeniority;
-
           // everything's found?
-          if( foundSeniority != -1 && lastModifState != null && lastTagState != null )
-            return new LastModifAndTagState( foundSeniority, lastModifState, lastTagState );
+          if( lastModifState != null && lastTagState != null )
+            return new LastModifAndTagState( lastModifState, lastTagState );
 
           current = revWalk.next();
 
@@ -336,12 +356,11 @@ public class ArtifactStateProvider {
 
       if( lastModifState == null ) {
         // should not happen
-        lastModifState = lastModif( current );
+        lastModifState = lastModif( currentSeniority, current );
         lastModifCache.set( def, lastModifCacheTargets, lastModifState );
-        foundSeniority = currentSeniority;
       }
 
-      return new LastModifAndTagState( foundSeniority, lastModifState, lastTagState );
+      return new LastModifAndTagState( lastModifState, lastTagState );
 
     } catch( IOException ex ) {
       throw new IllegalStateException( "IO exception: " + ex.getMessage(), ex );
