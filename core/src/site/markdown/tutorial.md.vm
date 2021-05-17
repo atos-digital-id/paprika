@@ -54,7 +54,7 @@ During the creation of `alpha` project, Maven archetype automatically updates th
 
 ![init](images/asy/tuto_init.svg)
 
-We represent in theses schemas the computed version in blue for each module of the project and for each commit. In another words, the versions in blue are the computed versions of your modules if you checkout the specific commit. To check quickly what versions are provided by Paprika at your current commit, you can simply do:
+We represent in theses schemas the computed version in blue for each module of the project and for each commit. In another words, the versions in blue was the computed versions of your modules when the branch reference was at the specific commit. To check quickly what versions are provided by Paprika at your current commit, you can simply do:
 ```bash
 mvn clean
 ```
