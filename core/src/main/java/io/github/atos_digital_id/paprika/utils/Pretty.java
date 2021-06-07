@@ -3,7 +3,7 @@ package io.github.atos_digital_id.paprika.utils;
 import java.util.Collection;
 import java.util.Iterator;
 
-import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.Ref;
 
 /**
@@ -98,7 +98,7 @@ public class Pretty {
    * @param builder the builder to append.
    * @param objectId the commit id to format.
    **/
-  public static void id( StringBuilder builder, ObjectId objectId ) {
+  public static void id( StringBuilder builder, AnyObjectId objectId ) {
     if( objectId == null )
       builder.append( "null" );
     else
@@ -111,7 +111,7 @@ public class Pretty {
    * @param objectId the commit id to format.
    * @return a lazy formatter of the commit id.
    **/
-  public static Object id( ObjectId objectId ) {
+  public static Object id( AnyObjectId objectId ) {
     return lazy( Pretty::id, objectId );
   }
 
@@ -121,7 +121,7 @@ public class Pretty {
    * @param coll the collection of commit id.
    * @return a lazy formatter of the collection.
    **/
-  public static Object ids( Collection<? extends ObjectId> coll ) {
+  public static Object ids( Collection<? extends AnyObjectId> coll ) {
     return lazy( coll( Pretty::id ), coll );
   }
 

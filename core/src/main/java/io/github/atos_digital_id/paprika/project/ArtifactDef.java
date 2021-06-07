@@ -4,8 +4,11 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+
+import org.apache.maven.model.Model;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -132,6 +135,22 @@ public class ArtifactDef extends ArtifactId {
   @Getter( lazy = true )
   private final Path workingDir = getPom().getParent();
 
+  /**
+   * Loaded model from the working dir.
+   *
+   * @return the loaded model.
+   **/
+  @Getter
+  private final Model model;
+
+  /**
+   * All module names.
+   *
+   * @return module names.
+   **/
+  @Getter
+  private final Set<String> modules;
+
   public ArtifactDef(
       @NonNull ArtifactDefProvider artifactDefProvider,
       @NonNull String groupId,
@@ -139,7 +158,9 @@ public class ArtifactDef extends ArtifactId {
       @NonNull String packaging,
       ArtifactId parentId,
       @NonNull Collection<ArtifactId> dependencyIds,
-      @NonNull Path relativePom ) {
+      @NonNull Path relativePom,
+      @NonNull Model model,
+      @NonNull Set<String> modules ) {
 
     super( groupId, artifactId );
     this.artifactDefProvider = artifactDefProvider;
@@ -147,6 +168,8 @@ public class ArtifactDef extends ArtifactId {
     this.parentId = parentId;
     this.dependencyIds = new TreeSet<>( dependencyIds );
     this.relativePom = relativePom;
+    this.model = model;
+    this.modules = modules;
 
   }
 

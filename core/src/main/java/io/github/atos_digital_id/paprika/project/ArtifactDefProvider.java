@@ -145,6 +145,22 @@ public class ArtifactDefProvider {
 
     force.addAll( ArtifactId.fromString( model.getProperties().getProperty( ANALYZED_KEY, "" ) ) );
 
+    // get all modules
+    Set<String> modules = new HashSet<>();
+
+    List<String> listModules = model.getModules();
+    if( listModules != null )
+      modules.addAll( listModules );
+
+    List<Profile> profiles = model.getProfiles();
+    if( profiles != null )
+      for( Profile profile : profiles ) {
+        listModules = profile.getModules();
+        if( listModules != null )
+          modules.addAll( listModules );
+      }
+
+    // Artifact definition
     ArtifactDef def = null;
 
     if( force.contains( id ) || isPaprikaVersion( model ) ) {
@@ -194,7 +210,9 @@ public class ArtifactDefProvider {
             packaging,
             parentId,
             dependencies,
-            pom );
+            pom,
+            model,
+            modules );
         cache.set( id, def );
         defs.add( def );
 
@@ -210,20 +228,6 @@ public class ArtifactDefProvider {
     loadParent( id, model, baseDir, force );
 
     // modules
-    Set<String> modules = new HashSet<>();
-
-    List<String> listModules = model.getModules();
-    if( listModules != null )
-      modules.addAll( listModules );
-
-    List<Profile> profiles = model.getProfiles();
-    if( profiles != null )
-      for( Profile profile : profiles ) {
-        listModules = profile.getModules();
-        if( listModules != null )
-          modules.addAll( listModules );
-      }
-
     for( String module : modules )
       loadModule( id, model, baseDir, module, force );
 
