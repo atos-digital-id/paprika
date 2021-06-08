@@ -146,6 +146,21 @@ public class InstallTest {
   }
 
   @Test
+  public void testGitIgnored() throws Exception {
+
+    git.readme( ".", 0 );
+    git.write( ".gitignore", "ignored\n" );
+    git.pom( ".", "alpha", 0, null, "jar", asList(), asList(), asList() );
+    git.java( ".", 0, "alpha" );
+    git.commit( "Init commit" );
+    git.tag( "alpha/1.0.0" );
+    git.write( "src/main/java/ignored", "Ignore me.\n" );
+
+    install( new ArtifactResult( "alpha", "1.0.0", "jar" ) );
+
+  }
+
+  @Test
   public void testPristineModules() throws Exception {
 
     git.readme( ".", 0 );

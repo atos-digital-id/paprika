@@ -3,9 +3,8 @@ package io.github.atos_digital_id.paprika.history;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -18,9 +17,8 @@ import org.apache.maven.model.io.ModelReader;
 import org.eclipse.jgit.diff.ContentSource;
 import org.eclipse.jgit.diff.RawText;
 import org.eclipse.jgit.errors.BinaryBlobException;
-import org.eclipse.jgit.lib.AnyObjectId;
+import org.eclipse.jgit.errors.StopWalkException;
 import org.eclipse.jgit.lib.FileMode;
-import org.eclipse.jgit.lib.MutableObjectId;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.ObjectReader;
@@ -32,7 +30,7 @@ import org.eclipse.jgit.treewalk.AbstractTreeIterator;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.FileTreeIterator;
 import org.eclipse.jgit.treewalk.TreeWalk;
-import org.eclipse.jgit.treewalk.WorkingTreeOptions;
+import org.eclipse.jgit.treewalk.filter.TreeFilter;
 import org.eclipse.jgit.util.LfsFactory;
 
 import io.github.atos_digital_id.paprika.GitHandler;
@@ -81,15 +79,15 @@ public class ArtifactCheckers {
   }
 
   @Data
-  private static class IdentifiedTree {
+  private static class PathPart {
 
-    private final AnyObjectId id;
+    private final int start;
 
-    private final CanonicalTreeParser tree;
+    private final byte[] bytes;
 
-    public IdentifiedTree reset() {
-      this.tree.reset();
-      return this;
+    @Override
+    public String toString() {
+      return start + ":" + new String( bytes );
     }
 
   }
@@ -101,26 +99,40 @@ public class ArtifactCheckers {
 
     private final ArtifactDef def;
 
-    private final List<String> pathElts;
+    private final List<PathPart> workingDir;
+
+    private final int workingDirLen;
+
+    private final int workingDirDepth;
+
+    private final List<byte[]> moduleBytes;
 
     private final Predicate<String> filter;
 
     private final String loggedPath;
-
-    private RevCommit previousCommit;
-
-    private IdentifiedTree previousTree;
 
     public Checker( ArtifactDef def ) {
 
       this.def = def;
 
       String p = gitHandler.relativize( def.getWorkingDir() );
-      this.pathElts = new LinkedList<>( Patterns.split( p, '/' ) );
-      Iterator<String> ite = this.pathElts.iterator();
-      while( ite.hasNext() )
-        if( ite.next().isEmpty() )
-          ite.remove();
+
+      List<String> pElts = Patterns.split( p, '/' );
+      List<PathPart> parts = new ArrayList<>( pElts.size() );
+      int start = 0;
+      for( String e : pElts ) {
+        if( !e.isEmpty() ) {
+          parts.add( new PathPart( start, e.getBytes() ) );
+          start += e.length() + 1;
+        }
+      }
+      this.workingDir = parts;
+      this.workingDirLen = start;
+      this.workingDirDepth = parts.size();
+
+      this.moduleBytes = new ArrayList<>( def.getModules().size() );
+      for( String module : def.getModules() )
+        this.moduleBytes.add( ( ( workingDirDepth == 0 ? "" : "/" ) + module ).getBytes() );
 
       this.filter = configHandler.get( def ).getObservedPath();
 
@@ -128,95 +140,120 @@ public class ArtifactCheckers {
 
     }
 
-    private boolean findSubTree(
-        CanonicalTreeParser tree,
-        String pathElt,
-        ObjectReader reader,
-        MutableObjectId bufferId ) throws IOException {
+    private final FastFilter treeFilter = new FastFilter();
 
-      while( !tree.eof() ) {
+    private class FastFilter extends TreeFilter {
 
-        String path = tree.getEntryPathString();
-        if( pathElt.equals( path ) ) {
-          bufferId.fromRaw( tree.idBuffer(), tree.idOffset() );
-          tree.reset( reader, bufferId );
+      boolean fs;
+
+      public FastFilter fs( boolean fs ) {
+        this.fs = fs;
+        return this;
+      }
+
+      @Override
+      public boolean include( TreeWalk walk ) throws IOException {
+
+        int depth = walk.getDepth();
+
+        // Search working directory
+
+        if( depth < workingDirDepth ) {
+
+          byte[] rawPath = walk.getRawPath();
+
+          PathPart part = workingDir.get( depth );
+          int partStart = part.getStart();
+          byte[] partBytes = part.getBytes();
+
+          for( int i = 0; i < partBytes.length; i++ ) {
+            if( rawPath.length <= partStart + i )
+              return false;
+            int comp = ( rawPath[partStart + i] & 0xff ) - ( partBytes[i] & 0xff );
+            if( comp < 0 )
+              return false;
+            if( comp > 0 )
+              throw StopWalkException.INSTANCE;
+          }
+          if( rawPath.length > partStart + partBytes.length )
+            throw StopWalkException.INSTANCE;
+
+          // skip if the working dirs are identical
+          if( ( depth == workingDirDepth - 1 ) && !fs && walk.idEqual( 0, 1 ) )
+            throw StopWalkException.INSTANCE;
+
           return true;
+
         }
 
-        tree.next( 1 );
+        // Exclude modules
+
+        if( depth == workingDirDepth )
+          for( byte[] module : moduleBytes )
+            if( walk.isPathSuffix( module, module.length ) )
+              return false;
+
+        // Exclude ignored files
+
+        if( fs && walk.getTree( 0, FileTreeIterator.class ).isEntryIgnored() )
+          return false;
+
+        // Filter identical versionned directories
+        if( walk.isSubtree() )
+          return fs || !walk.idEqual( 0, 1 );
+
+        // Regular file: check for modification
+
+        FileMode oldMode = walk.getFileMode( 0 );
+        if( oldMode == FileMode.MISSING )
+          return true;
+
+        FileMode newMode = walk.getFileMode( 1 );
+        if( newMode == FileMode.MISSING )
+          return true;
+
+        if( oldMode != newMode )
+          return true;
+
+        return !walk.idEqual( 0, 1 );
 
       }
 
-      return false;
+      @Override
+      public boolean shouldBeRecursive() {
+        return false;
+      }
 
-    }
+      @Override
+      public TreeFilter clone() {
+        return this;
+      }
 
-    private IdentifiedTree getTree( ObjectReader reader, RevCommit commit ) throws IOException {
-
-      CanonicalTreeParser tree = new CanonicalTreeParser();
-      RevTree revTree = commit.getTree();
-      tree.reset( reader, revTree );
-
-      if( pathElts.isEmpty() )
-        return new IdentifiedTree( revTree, tree );
-
-      MutableObjectId bufferId = new MutableObjectId();
-
-      for( String elt : pathElts )
-        if( !findSubTree( tree, elt, reader, bufferId ) )
-          return null;
-
-      return new IdentifiedTree( bufferId, tree );
-
-    }
-
-    private boolean isModified( TreeWalk walk ) {
-
-      FileMode oldMode = walk.getFileMode( 0 );
-      if( oldMode == FileMode.MISSING )
-        return true;
-
-      FileMode newMode = walk.getFileMode( 1 );
-      if( newMode == FileMode.MISSING )
-        return true;
-
-      if( oldMode != newMode )
-        return true;
-
-      return !walk.idEqual( 0, 1 );
-
-    }
+    };
 
     private boolean isModifiedIn(
         ObjectReader reader,
         ContentSource source,
         ContentSource parentSource,
         AbstractTreeIterator tree,
-        AbstractTreeIterator parent ) throws IOException {
+        AbstractTreeIterator parent,
+        boolean fs ) throws IOException {
 
       try( TreeWalk walk = new TreeWalk( gitHandler.repository(), reader ) ) {
 
-        walk.addTree( parent );
         walk.addTree( tree );
-        walk.setRecursive( false );
+        walk.addTree( parent );
+        walk.setRecursive( true );
+        walk.setFilter( treeFilter.fs( fs ) );
 
         while( walk.next() ) {
 
           String path = walk.getPathString();
 
-          if( walk.isSubtree() ) {
-            if( walk.getDepth() != 0 || !this.def.getModules().contains( path ) )
-              walk.enterSubtree();
-            continue;
-          }
-
           logger.stack( "Diff at {}: ", path );
           try {
 
-            if( !isModified( walk ) )
-              continue;
-
-            if( !filter.test( path ) ) {
+            if( !filter.test( path.substring( workingDirLen ) ) ) {
               logger.log( "Not observed." );
               continue;
             }
@@ -262,6 +299,14 @@ public class ArtifactCheckers {
 
     }
 
+    private CanonicalTreeParser getTree( ObjectReader reader, RevCommit commit )
+        throws IOException {
+      CanonicalTreeParser tree = new CanonicalTreeParser();
+      RevTree revTree = commit.getTree();
+      tree.reset( reader, revTree );
+      return tree;
+    }
+
     /**
      * Test if the module is dirty.
      *
@@ -277,22 +322,14 @@ public class ArtifactCheckers {
       ObjectReader reader = revWalk.getObjectReader();
       ContentSource source = ContentSource.create( reader );
 
-      IdentifiedTree headTree = getTree( reader, head );
-      if( headTree == null )
-        return true;
+      CanonicalTreeParser headTree = getTree( reader, head );
 
-      this.previousCommit = head;
-      this.previousTree = headTree;
-
-      FileTreeIterator workingTree = new FileTreeIterator(
-          this.def.getWorkingDir().toFile(),
-          repo.getFS(),
-          repo.getConfig().get( WorkingTreeOptions.KEY ) );
+      FileTreeIterator workingTree = new FileTreeIterator( repo );
 
       logger
           .log( "Compare working dir and commit {} on {}", Pretty.id( head.getId() ), loggedPath );
 
-      return isModifiedIn( reader, null, source, workingTree, headTree.getTree() );
+      return isModifiedIn( reader, null, source, workingTree, headTree, true );
 
     }
 
@@ -315,23 +352,9 @@ public class ArtifactCheckers {
 
       ObjectReader reader = revWalk.getObjectReader();
 
-      IdentifiedTree commitTree;
-      if( this.previousCommit != null && this.previousCommit.equals( commit ) ) {
-        commitTree = this.previousTree.reset();
-      } else {
-        commitTree = getTree( reader, commit );
-        if( commitTree == null )
-          return true;
-      }
+      CanonicalTreeParser commitTree = getTree( reader, commit );
 
-      IdentifiedTree parentTree = getTree( reader, parent );
-      if( parentTree == null )
-        return true;
-      this.previousCommit = commit;
-      this.previousTree = parentTree;
-
-      if( commitTree.getId().equals( parentTree.getId() ) )
-        return false;
+      CanonicalTreeParser parentTree = getTree( reader, parent );
 
       logger.log(
           "Compare commit {} and {} on {}",
@@ -340,7 +363,7 @@ public class ArtifactCheckers {
           loggedPath );
 
       ContentSource source = ContentSource.create( reader );
-      return isModifiedIn( reader, source, source, commitTree.getTree(), parentTree.getTree() );
+      return isModifiedIn( reader, source, source, commitTree, parentTree, false );
 
     }
 

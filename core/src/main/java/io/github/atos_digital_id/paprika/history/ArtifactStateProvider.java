@@ -184,39 +184,37 @@ public class ArtifactStateProvider {
 
       RevCommit head = revWalk.parseCommit( headId );
 
-      // test working dir
-      if( checker.isDirty( revWalk, head ) ) {
-        logger.log( "Dirty working dir" );
-        lastModifState = dirty();
-      }
-
       // get most recent modification of a dependency
       ArtifactDef depLastModif = null;
       LastModifState depLastModifState = null;
       int depLastModifSeniority = Integer.MAX_VALUE;
-      if( lastModifState == null ) {
-        for( ArtifactDef dependency : def.getAllDependencies() ) {
+      for( ArtifactDef dependency : def.getAllDependencies() ) {
 
-          LastModifAndTagState depState = get( dependency );
-          LastModifState depModifState = depState.getLastModif();
-          int depSeniority = depModifState.getSeniority();
+        LastModifAndTagState depState = get( dependency );
+        LastModifState depModifState = depState.getLastModif();
+        int depSeniority = depModifState.getSeniority();
 
-          if( depLastModifSeniority > depSeniority ) {
-            depLastModif = dependency;
-            depLastModifState = depModifState;
-            depLastModifSeniority = depSeniority;
-          }
-
-          if( depLastModifSeniority == 0 )
-            break;
-
+        if( depLastModifSeniority > depSeniority ) {
+          depLastModif = dependency;
+          depLastModifState = depModifState;
+          depLastModifSeniority = depSeniority;
         }
+
+        if( depLastModifSeniority == 0 )
+          break;
+
       }
 
       // test dirty dependency
       if( depLastModifSeniority == 0 ) {
         logger.log( "Dirty dependency: {}", depLastModif );
         lastModifState = depLastModifState;
+      }
+
+      // test working dir
+      if( lastModifState == null && checker.isDirty( revWalk, head ) ) {
+        logger.log( "Dirty working dir" );
+        lastModifState = dirty();
       }
 
       revWalk.setFirstParent( true );

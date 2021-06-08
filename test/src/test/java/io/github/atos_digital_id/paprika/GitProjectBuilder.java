@@ -119,6 +119,12 @@ public class GitProjectBuilder implements AutoCloseable {
 
   }
 
+  public void write( String path, String content ) throws IOException {
+    Path p = resolve( path );
+    Files.createDirectories( p.getParent() );
+    Files.writeString( p, content );
+  }
+
   private void write( Path path, String template, Map<String, Object> context ) throws IOException {
 
     Files.createDirectories( path.getParent() );
