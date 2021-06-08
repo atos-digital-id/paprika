@@ -6,7 +6,7 @@ The configuration files can be placed in `.mvn/paprika.properties` in the root p
 Key | Default value | Description
 --- | --- | ---
 `initVersion` | `0.1.0` | First version when no tag is found (without pre-release parts).
-`observedPath` | `pom.xml:.mvn/**:src/main/**` | Observed paths of each module for modification. Always use `/` to separate directories. See wildcards support.
+`observedPath` | `pom.xml:.mvn/**:src/main/**` | Observed paths of each module for modification. Always use `/` to separate directories. See wildcards support. Maven sub-module directories and Git ignored files (with `.gitignored`) can not be observed.
 `nonQualifierBranches` | `main:master` | Branch names for which snapshot versions will not contain the branch name. See wildcards support.
 `reproducible` | `true` | Set the Maven property `project.build.outputTimestamp` with the date of the last modification commit.
 `release.annotated` | `true` | `release` goal: generate annotated tag commands.
