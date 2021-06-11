@@ -11,7 +11,7 @@ Paprika is a Maven plugin which computes version numbers based on the tags and h
  * [The `release` goal](release-mojo.html)
  * [A complete tutorial](tutorial.html)
 
-#[[## Why we created Paprika?]]#
+#[[## Why did we create Paprika?]]#
 
 The multi/mono-repository debate is, at least, an active subject in Internet. The blog entries which can be found are very opinionated, with a lot a sad and great back stories, advices issued for painful experiences, and describe the pros and cons of one solution over the other. Generally, we can cite in favor of the monorepo several usage conveniences: it's simpler to understand for new developers hired on the project (only one checkout), the code can be factorized and reorganized more easily, an adapted build system can handle the compilation order and build all libraries from scratch, the peer reviewing for features implying modification on several libraries is sanitized and doesn't look like a treasure hunt designed by Satan. On the other hand, the multi-repositories organization is not without advantages: each project has its own life cycle and release schedule, dependencies are clearly marked, and the code separation limits the coupling between projects. In fact, a multirepo organization seems more aligned with a micro-service architecture.
 
