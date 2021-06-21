@@ -358,4 +358,27 @@ public class InstallTest {
 
   }
 
+  @Test
+  public void testDashedSuffix() throws Exception {
+
+    git.readme( ".", 0 );
+    git.pom( ".", "parent", 0, null, "pom", asList( "alpha", "alpha-beta" ), asList(), asList() );
+    git.pom( "alpha", "alpha", 0, "parent", "jar", asList(), asList(), asList() );
+    git.java( "alpha", 0, "alpha" );
+    git.pom( "alpha-beta", "alpha-beta", 0, "parent", "jar", asList(), asList( ALPHA ), asList() );
+    git.java( "alpha-beta", 0, "beta" );
+    git.commit( "Init commit" );
+    git.tag( "parent/1.1.0" );
+    git.tag( "alpha/1.1.0" );
+    git.tag( "alpha-beta/1.1.0" );
+    git.java( "alpha", 1, "alpha" );
+    git.commit( "New alpha" );
+
+    install(
+        new ArtifactResult( "parent", "1.1.0", "pom" ),
+        new ArtifactResult( "alpha", "1.2.0-SNAPSHOT", "jar" ),
+        new ArtifactResult( "alpha-beta", "1.2.0-SNAPSHOT", "jar" ) );
+
+  }
+
 }

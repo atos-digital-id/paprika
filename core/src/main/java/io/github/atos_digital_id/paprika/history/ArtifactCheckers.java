@@ -136,7 +136,7 @@ public class ArtifactCheckers {
 
       this.filter = configHandler.get( def ).getObservedPath();
 
-      this.loggedPath = p + "{" + configHandler.get( def ).getObservedPathValue() + "}";
+      this.loggedPath = p + "/{" + configHandler.get( def ).getObservedPathValue() + "}";
 
     }
 
@@ -175,8 +175,11 @@ public class ArtifactCheckers {
             if( comp > 0 )
               throw StopWalkException.INSTANCE;
           }
-          if( rawPath.length > partStart + partBytes.length )
-            throw StopWalkException.INSTANCE;
+          if( rawPath.length > partStart + partBytes.length ) {
+            if( rawPath[partStart + partBytes.length] > '/' )
+              throw StopWalkException.INSTANCE;
+            return false;
+          }
 
           // skip if the working dirs are identical
           if( ( depth == workingDirDepth - 1 ) && !fs && walk.idEqual( 0, 1 ) )
