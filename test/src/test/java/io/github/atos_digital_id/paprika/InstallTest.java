@@ -381,4 +381,26 @@ public class InstallTest {
 
   }
 
+  @Test
+  public void testRemoveModule() throws Exception {
+
+    git.readme( ".", 0 );
+    git.pom( ".", "parent", 0, null, "pom", asList( "alpha", "beta" ), asList(), asList() );
+    git.pom( "alpha", "alpha", 0, "parent", "jar", asList(), asList(), asList() );
+    git.java( "alpha", 0, "alpha" );
+    git.pom( "beta", "beta", 0, "parent", "jar", asList(), asList( ALPHA ), asList() );
+    git.java( "beta", 0, "beta" );
+    git.commit( "Init commit" );
+    git.tag( "parent/1.1.0" );
+    git.tag( "alpha/1.1.0" );
+    git.tag( "beta/1.1.0" );
+    git.pom( ".", "parent", 0, null, "pom", asList( "alpha" ), asList(), asList() );
+    git.rm( "beta" );
+
+    install(
+        new ArtifactResult( "parent", "1.1.0", "pom" ),
+        new ArtifactResult( "alpha", "1.1.0", "jar" ) );
+
+  }
+
 }

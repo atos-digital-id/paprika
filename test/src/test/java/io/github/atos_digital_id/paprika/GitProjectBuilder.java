@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
@@ -253,6 +254,20 @@ public class GitProjectBuilder implements AutoCloseable {
         resolve( path, "src", "main", "java", "com", pack, "FooBar.java" ),
         "templates/java.template",
         context );
+
+  }
+
+  public void rm( @NonNull String path ) throws IOException {
+    rm( resolve( path ) );
+  }
+
+  public void rm( @NonNull Path path ) throws IOException {
+
+    if( Files.isDirectory( path ) )
+      for( Path sub : Files.list( path ).collect( Collectors.toList() ) )
+        rm( sub );
+
+    Files.delete( path );
 
   }
 
