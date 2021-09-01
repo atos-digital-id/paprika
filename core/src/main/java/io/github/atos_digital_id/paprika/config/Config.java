@@ -1,8 +1,7 @@
 package io.github.atos_digital_id.paprika.config;
 
-import java.util.function.Predicate;
-
 import io.github.atos_digital_id.paprika.utils.Patterns;
+import io.github.atos_digital_id.paprika.utils.Patterns.PathFilter;
 import io.github.atos_digital_id.paprika.version.Version;
 import io.github.atos_digital_id.paprika.version.VersionParsingException;
 import lombok.Builder;
@@ -38,16 +37,10 @@ public class Config {
    * @return a qualified branch name predicate.
    **/
   @Getter( lazy = true )
-  private final Predicate<String> qualifiedBranchPredicate = parseQualifiedBranches();
+  private final PathFilter nonQualifiedBranchPredicate = parseNonQualifiedBranches();
 
-  private Predicate<String> parseQualifiedBranches() {
-
-    String names = getNonQualifierBrancheNames();
-    if( names == null || names.isEmpty() )
-      return branch -> true;
-
-    return Patterns.matcher( names ).negate();
-
+  private PathFilter parseNonQualifiedBranches() {
+    return Patterns.pathFilter( getNonQualifierBrancheNames() );
   }
 
   /**
@@ -58,7 +51,7 @@ public class Config {
    * @return if the branch should be qualified.
    **/
   public boolean isQualifiedBranch( String branch ) {
-    return getQualifiedBranchPredicate().test( branch );
+    return !getNonQualifiedBranchPredicate().complete( branch );
   }
 
   /**
@@ -108,16 +101,10 @@ public class Config {
    * @return an observed path predicate.
    **/
   @Getter( lazy = true )
-  private final Predicate<String> observedPath = parseObservedPath();
+  private final PathFilter observedPath = parseObservedPath();
 
-  private Predicate<String> parseObservedPath() {
-
-    String path = getObservedPathValue();
-    if( path == null || path.isEmpty() )
-      return str -> true;
-
-    return Patterns.matcher( path );
-
+  private PathFilter parseObservedPath() {
+    return Patterns.pathFilter( getObservedPathValue() );
   }
 
   /**

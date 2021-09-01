@@ -2,27 +2,26 @@ package io.github.atos_digital_id.paprika.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.function.Predicate;
-
 import org.junit.jupiter.api.Test;
 
 import io.github.atos_digital_id.paprika.utils.Patterns;
+import io.github.atos_digital_id.paprika.utils.Patterns.PathFilter;
 
 public class PatternsTest {
 
   private void shouldMatch( String pattern, String ... matches ) {
 
-    Predicate<String> p = Patterns.matcher( pattern );
+    PathFilter p = Patterns.pathFilter( pattern );
     for( String match : matches )
-      assertThat( p.test( match ) ).as( pattern + " ~ " + match ).isTrue();
+      assertThat( p.complete( match ) ).as( pattern + " ~ " + match ).isTrue();
 
   }
 
   private void shouldNotMatch( String pattern, String ... matches ) {
 
-    Predicate<String> p = Patterns.matcher( pattern );
+    PathFilter p = Patterns.pathFilter( pattern );
     for( String match : matches )
-      assertThat( p.test( match ) ).as( pattern + " ~ " + match ).isFalse();
+      assertThat( p.complete( match ) ).as( pattern + " ~ " + match ).isFalse();
 
   }
 

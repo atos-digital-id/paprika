@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -34,10 +33,13 @@ import org.eclipse.jgit.treewalk.filter.TreeFilter;
 import org.eclipse.jgit.util.LfsFactory;
 
 import io.github.atos_digital_id.paprika.GitHandler;
+import io.github.atos_digital_id.paprika.config.Config;
 import io.github.atos_digital_id.paprika.config.ConfigHandler;
 import io.github.atos_digital_id.paprika.project.ArtifactDef;
 import io.github.atos_digital_id.paprika.utils.Briefs.BriefModel;
 import io.github.atos_digital_id.paprika.utils.Patterns;
+import io.github.atos_digital_id.paprika.utils.Patterns.PathFilter;
+import io.github.atos_digital_id.paprika.utils.Patterns.PathFilterResult;
 import io.github.atos_digital_id.paprika.utils.Pretty;
 import io.github.atos_digital_id.paprika.utils.cache.ArtifactIdCache;
 import io.github.atos_digital_id.paprika.utils.cache.HashMapArtifactIdCache;
@@ -105,9 +107,7 @@ public class ArtifactCheckers {
 
     private final int workingDirDepth;
 
-    private final List<byte[]> moduleBytes;
-
-    private final Predicate<String> filter;
+    private final PathFilter filter;
 
     private final String loggedPath;
 
@@ -130,13 +130,11 @@ public class ArtifactCheckers {
       this.workingDirLen = start;
       this.workingDirDepth = parts.size();
 
-      this.moduleBytes = new ArrayList<>( def.getModules().size() );
-      for( String module : def.getModules() )
-        this.moduleBytes.add( ( ( workingDirDepth == 0 ? "" : "/" ) + module ).getBytes() );
+      Config config = configHandler.get( def );
 
-      this.filter = configHandler.get( def ).getObservedPath();
+      this.filter = config.getObservedPath();
 
-      this.loggedPath = p + "/{" + configHandler.get( def ).getObservedPathValue() + "}";
+      this.loggedPath = p + "/{" + config.getObservedPathValue() + "}";
 
     }
 
@@ -144,11 +142,17 @@ public class ArtifactCheckers {
 
     private class FastFilter extends TreeFilter {
 
-      boolean fs;
+      private boolean fs;
+
+      private String currentPath = null;
 
       public FastFilter fs( boolean fs ) {
         this.fs = fs;
         return this;
+      }
+
+      public String getCurrentPath() {
+        return this.currentPath;
       }
 
       @Override
@@ -189,17 +193,19 @@ public class ArtifactCheckers {
 
         }
 
-        // Exclude modules
+        this.currentPath = walk.getPathString().substring( workingDirLen );
 
-        if( depth == workingDirDepth )
-          for( byte[] module : moduleBytes )
-            if( walk.isPathSuffix( module, module.length ) )
-              return false;
+        // Filter observable paths
+        if( walk.isSubtree() && filter.partial( this.currentPath ) == PathFilterResult.TREE_MATCH )
+          return true;
 
         // Exclude ignored files
 
-        if( fs && walk.getTree( 0, FileTreeIterator.class ).isEntryIgnored() )
-          return false;
+        if( fs ) {
+          FileTreeIterator oldTree = walk.getTree( 0, FileTreeIterator.class );
+          if( oldTree != null && oldTree.isEntryIgnored() )
+            return false;
+        }
 
         // Filter identical versionned directories
         if( walk.isSubtree() )
@@ -251,12 +257,12 @@ public class ArtifactCheckers {
 
         while( walk.next() ) {
 
-          String path = walk.getPathString();
+          String path = treeFilter.getCurrentPath();
 
           logger.stack( "Diff at {}: ", path );
           try {
 
-            if( !filter.test( path.substring( workingDirLen ) ) ) {
+            if( !filter.complete( path ) ) {
               logger.log( "Not observed." );
               continue;
             }
