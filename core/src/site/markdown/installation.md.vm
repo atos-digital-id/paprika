@@ -16,7 +16,7 @@ Paprika has to be installed as a [Maven extension](http://maven.apache.org/studi
 </extensions>
 ```
 
-Then replace every version of the projects contained in the multi-modules project in your pom files with `#[[${paprika}]]#`:
+Then replace every version of the projects contained in the multi-modules project in your pom files with `paprika` (case insensitive):
 
  * in the `<version>` tag if it exists (so, if the project has no parent or if the parent is not in the multi-module project),
  * in every `<parent>/<version>`, `<dependency>/<version>`, `<plugin>/<version>`, `<reportPlugin>/<version>` or `<extension>/<version>` sections, if the dependency is build in the same multi-module project.

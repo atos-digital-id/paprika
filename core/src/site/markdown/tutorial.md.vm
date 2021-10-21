@@ -14,7 +14,7 @@ mvn -B archetype:generate \
     -DarchetypeVersion=1.1 \
     -DgroupId=com.hypatia \
     -DartifactId=parent \
-    -Dversion='#[[${paprika}]]#'
+    -Dversion='paprika'
 
 # install Paprika
 cd parent
@@ -43,7 +43,7 @@ mvn -B archetype:generate \
     -DarchetypeVersion=1.4 \
     -DgroupId=com.hypatia \
     -DartifactId=alpha \
-    -Dversion='#[[${paprika}]]#'
+    -Dversion='paprika'
 
 # commit alpha project
 git add .
@@ -99,7 +99,7 @@ Our Git history is now:
 
 ![dev process](images/asy/tuto_dev_process.svg)
 
-As you can see in the `pom.xml` file of `alpha` project, both `alpha` and `parent` versions are marked with the same placeholder `#[[${paprika}]]#`, but Paprika will resolve theses versions independently and differently, depending the situation of each module.
+As you can see in the `pom.xml` file of `alpha` project, both `alpha` and `parent` versions are marked with the same placeholder `paprika`, but Paprika will resolve theses versions independently and differently, depending the situation of each module.
 
 #[[## Dependency checking]]#
 
@@ -166,14 +166,14 @@ mvn -B archetype:generate \
     -DarchetypeVersion=1.4 \
     -DgroupId=com.hypatia \
     -DartifactId=beta \
-    -Dversion='#[[${paprika}]]#'
+    -Dversion='paprika'
 
 # add alpha as a dependency
 xmlstarlet edit -L -N x="http://maven.apache.org/POM/4.0.0" -s '/x:project/x:dependencies' -t elem -n dependency beta/pom.xml
 xmlstarlet edit -L -N x="http://maven.apache.org/POM/4.0.0" \
     -s '/x:project/x:dependencies/x:dependency[last()]' -t elem -n groupId -v com.hypatia \
     -s '/x:project/x:dependencies/x:dependency[last()]' -t elem -n artifactId -v alpha \
-    -s '/x:project/x:dependencies/x:dependency[last()]' -t elem -n version -v '#[[${paprika}]]#' beta/pom.xml
+    -s '/x:project/x:dependencies/x:dependency[last()]' -t elem -n version -v 'paprika' beta/pom.xml
 
 # commit beta project
 git add .
@@ -184,7 +184,7 @@ Which give this history:
 
 ![add beta project](images/asy/tuto_add_beta.svg)
 
-Like in `alpha/pom.xml`, every versions of our multi-module project are marked with `#[[${paprika}]]#`, but each time Paprika will resolve these versions differently. The `parent` version is not modified, since adding a module doesn't count like a modification.
+Like in `alpha/pom.xml`, every versions of our multi-module project are marked with `paprika`, but each time Paprika will resolve these versions differently. The `parent` version is not modified, since adding a module doesn't count like a modification.
 
 But, after reflexion, we don't want to hurt `beta` feelings and we decide to have a base version at `1.0.0` and not `0.1.0` anymore. So, we need to add a configuration file. But if we create a configuration file for `parent` (so at `./.mvn/paprika.properties`), that will modify `parent` and so `alpha` (since `alpha` depends on `parent`). That's not specially an issue: in that situation, with all module marked as modified, we can always choose to release `beta` (and so `parent`) without releasing `alpha`. But we need to take a decision, and since there is no planing of adding another module after `beta`, we decide to minimize modifications and configure only `beta` project, by amending the previous commit:
 ```bash
