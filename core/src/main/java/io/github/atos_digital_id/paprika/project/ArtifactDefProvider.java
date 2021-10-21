@@ -43,7 +43,18 @@ public class ArtifactDefProvider {
   /**
    * Paprika version placeholder.
    **/
-  public static final String VERSION_PLACEHOLDER = "${paprika}";
+  public static final String VERSION_PLACEHOLDER = "paprika";
+
+  /**
+   * Test if the given version is defined with the Paprika version placeholder.
+   *
+   * @param version the version to test.
+   * @return true if the version is defined with the Paprika version
+   *         placeholder.
+   **/
+  public static boolean isPaprikaVersion( String version ) {
+    return version != null && version.equalsIgnoreCase( VERSION_PLACEHOLDER );
+  }
 
   /**
    * Test if the model is defined with the Paprika version placeholder.
@@ -60,7 +71,7 @@ public class ArtifactDefProvider {
         version = parent.getVersion();
     }
 
-    return VERSION_PLACEHOLDER.equals( version );
+    return isPaprikaVersion( version );
 
   }
 
@@ -71,7 +82,7 @@ public class ArtifactDefProvider {
    * @return true if the parent is flagged with the Paprika version placeholder.
    **/
   public static boolean isPaprikaVersion( @NonNull Parent parent ) {
-    return VERSION_PLACEHOLDER.equals( parent.getVersion() );
+    return isPaprikaVersion( parent.getVersion() );
   }
 
   /**
@@ -81,7 +92,7 @@ public class ArtifactDefProvider {
    * @return true if the GAV is flagged with the Paprika version placeholder.
    **/
   public static boolean isPaprikaVersion( @NonNull GAV gav ) {
-    return VERSION_PLACEHOLDER.equals( gav.getVersion() );
+    return isPaprikaVersion( gav.getVersion() );
   }
 
   /**

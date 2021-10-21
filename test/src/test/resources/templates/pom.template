@@ -8,7 +8,7 @@
   <parent>
     <groupId>com.paprika-test</groupId>
     <artifactId>$parent</artifactId>
-    <version>${paprika}</version>
+    <version>paprika</version>
   </parent>
 
 #else
@@ -16,7 +16,7 @@
 #end
   <artifactId>$name</artifactId>
 #if( $parent == $null )
-  <version>${paprika}</version>
+  <version>paprika</version>
 #end
 #if( $packaging != "jar" )
   <packaging>$packaging</packaging>
