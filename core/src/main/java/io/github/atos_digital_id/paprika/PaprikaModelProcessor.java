@@ -16,10 +16,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.apache.maven.building.Source;
-import org.apache.maven.model.Build;
 import org.apache.maven.model.Model;
-import org.apache.maven.model.Plugin;
-import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.building.DefaultModelProcessor;
 import org.apache.maven.model.building.ModelProcessor;
 
@@ -34,8 +31,7 @@ import io.github.atos_digital_id.paprika.utils.ModelWalker.GAV;
 import io.github.atos_digital_id.paprika.utils.log.PaprikaLogger;
 
 /**
- * Paprika model processor modifies versions, force {@link PaprikaUpdatePomMojo}
- * usage and injects properties.
+ * Paprika model processor modifies versions and injects properties.
  **/
 @Named
 @Singleton
@@ -43,13 +39,8 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
 
   public static final String TIMESTAMP_PROPERTY = "project.build.outputTimestamp";
 
-  private static final String PHASE = "validate";
-
   @Inject
   private PaprikaLogger logger;
-
-  @Inject
-  private PaprikaBuildInfo paprikaBuildInfo;
 
   @Inject
   private ConfigHandler configHandler;
@@ -116,8 +107,6 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
         ArtifactDefProvider.ANALYZED_KEY,
         ArtifactId.toString( artifactDefProvider.getAllDefs() ) );
 
-    addUpdatePomMojo( model );
-
     return model;
 
   }
@@ -135,48 +124,6 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
     properties.put( prefix + ".snapshot", status.getSnapshotAsString() );
     properties.put( prefix + ".pristine", status.getPristineAsString() );
     properties.put( prefix, status.getVersionAsString() );
-
-  }
-
-  private void addUpdatePomMojo( Model model ) {
-
-    Build build = model.getBuild();
-    if( build == null )
-      model.setBuild( build = new Build() );
-
-    List<Plugin> plugins = build.getPlugins();
-    if( plugins == null )
-      build.setPlugins( plugins = new ArrayList<>() );
-
-    Plugin plugin = plugins.stream().filter( x -> {
-      return paprikaBuildInfo.getGroupId().equalsIgnoreCase( x.getGroupId() )
-          && paprikaBuildInfo.getArtifactId().equalsIgnoreCase( x.getArtifactId() );
-    } ).findFirst().orElse( null );
-    if( plugin == null ) {
-      plugin = new Plugin();
-      plugin.setGroupId( paprikaBuildInfo.getGroupId() );
-      plugin.setArtifactId( paprikaBuildInfo.getArtifactId() );
-      plugin.setVersion( paprikaBuildInfo.getVersion() );
-      plugins.add( 0, plugin );
-    }
-
-    List<PluginExecution> executions = plugin.getExecutions();
-    if( executions == null )
-      plugin.setExecutions( executions = new ArrayList<>() );
-
-    PluginExecution execution = executions.stream()
-        .filter( x -> PHASE.equalsIgnoreCase( x.getPhase() ) ).findFirst().orElse( null );
-    if( execution == null ) {
-      execution = new PluginExecution();
-      execution.setPhase( PHASE );
-      executions.add( execution );
-    }
-
-    List<String> goals = execution.getGoals();
-    if( goals == null )
-      execution.setGoals( goals = new ArrayList<>() );
-    if( !goals.contains( PaprikaUpdatePomMojo.GOAL ) )
-      goals.add( PaprikaUpdatePomMojo.GOAL );
 
   }
 
