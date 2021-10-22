@@ -23,4 +23,10 @@ Then replace every version of the projects contained in the multi-modules projec
  * in the `<version>` tag if it exists (so, if the project has no parent or if the parent is not in the multi-module project),
  * in every `<parent>/<version>`, `<dependency>/<version>`, `<plugin>/<version>`, `<reportPlugin>/<version>` or `<extension>/<version>` sections, if the dependency is build in the same multi-module project.
 
+# IDE integration
+
+#[[## IntelliJ]]#
+
+To use Paprika with IntelliJ, you should deactivate Paprika during project importations: add the option `-Dpaprika.skip` to your to Maven Importer VM options (File > Settings > Build, Execution, Deployment > Build Tools > Maven > Importing > VM options for importer Maven). Then you should rebuild your project (Build > Rebuild project) and synchronize Maven configuration (right click on the project > Maven > Reload project).
+
 ## vim: set syntax=markdown :**
