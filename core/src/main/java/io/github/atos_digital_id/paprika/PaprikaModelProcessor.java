@@ -39,6 +39,39 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
 
   public static final String TIMESTAMP_PROPERTY = "project.build.outputTimestamp";
 
+  public static final String SYSTEM_SKIP = "paprika.skip";
+
+  public static final String ENV_SKIP = "PAPRIKA_SKIP";
+
+  private static Boolean skip;
+
+  private static Boolean checkSkipValue( String value ) {
+
+    if( value == null )
+      return null;
+
+    return !value.equalsIgnoreCase( "FALSE" );
+
+  }
+
+  private static boolean isSkipped() {
+
+    if( skip != null )
+      return skip;
+
+    skip = checkSkipValue( System.getProperty( SYSTEM_SKIP ) );
+    if( skip != null )
+      return skip;
+
+    skip = checkSkipValue( System.getenv( ENV_SKIP ) );
+    if( skip != null )
+      return skip;
+
+    skip = false;
+    return skip;
+
+  }
+
   @Inject
   private PaprikaLogger logger;
 
@@ -71,7 +104,7 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
 
   private Model updateModel( Model model, Map<String, ?> options ) throws IOException {
 
-    if( !isPaprikaVersion( model ) )
+    if( isSkipped() || !isPaprikaVersion( model ) )
       return model;
 
     Source source = (Source) options.get( ModelProcessor.SOURCE );
