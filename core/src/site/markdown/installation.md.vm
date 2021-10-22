@@ -1,6 +1,8 @@
 
 # Installation
 
+Paprika need at a least the version 3.8.1 of Maven.
+
 Paprika has to be installed as a [Maven extension](http://maven.apache.org/studies/extension-demo/): create a file `.mvn/extensions.xml` at the root directory of the (multi-modules) project with the following content:
 ```
 <extensions xmlns="http://maven.apache.org/EXTENSIONS/1.0.0"
