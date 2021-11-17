@@ -16,7 +16,9 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.apache.maven.building.Source;
+import org.apache.maven.model.Build;
 import org.apache.maven.model.Model;
+import org.apache.maven.model.Plugin;
 import org.apache.maven.model.building.DefaultModelProcessor;
 import org.apache.maven.model.building.ModelProcessor;
 
@@ -74,6 +76,9 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
 
   @Inject
   private PaprikaLogger logger;
+
+  @Inject
+  private PaprikaBuildInfo paprikaBuildInfo;
 
   @Inject
   private ConfigHandler configHandler;
@@ -140,6 +145,8 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
         ArtifactDefProvider.ANALYZED_KEY,
         ArtifactId.toString( artifactDefProvider.getAllDefs() ) );
 
+    addPaprikaDependency( model );
+
     return model;
 
   }
@@ -157,6 +164,33 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
     properties.put( prefix + ".snapshot", status.getSnapshotAsString() );
     properties.put( prefix + ".pristine", status.getPristineAsString() );
     properties.put( prefix, status.getVersionAsString() );
+
+  }
+
+  private void addPaprikaDependency( Model model ) {
+
+    String g = paprikaBuildInfo.getGroupId();
+    String a = paprikaBuildInfo.getArtifactId();
+    String v = paprikaBuildInfo.getVersion();
+
+    Build build = model.getBuild();
+    if( build == null )
+      model.setBuild( build = new Build() );
+
+    List<Plugin> plugins = build.getPlugins();
+    if( plugins == null )
+      build.setPlugins( plugins = new ArrayList<>() );
+
+    Plugin plugin = plugins.stream().filter( x -> {
+      return g.equalsIgnoreCase( x.getGroupId() ) && a.equalsIgnoreCase( x.getArtifactId() );
+    } ).findFirst().orElse( null );
+    if( plugin == null ) {
+      plugin = new Plugin();
+      plugin.setGroupId( g );
+      plugin.setArtifactId( a );
+      plugin.setVersion( v );
+      plugins.add( 0, plugin );
+    }
 
   }
 
