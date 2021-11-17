@@ -27,7 +27,7 @@ jobs:
         gpg --list-secret-keys --keyid-format LONG
     - name: Build
       run: >
-        mvn -B -ntp clean install \
+        mvn -B -ntp clean install -pl :paprika-maven-plugin -am \
           "-Dhttp.keepAlive=false" \
           "-Dmaven.wagon.http.pool=false" \
           "-Dmaven.wagon.httpconnectionManager.ttlSeconds=120"
