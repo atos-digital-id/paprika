@@ -5,7 +5,7 @@
   <extension>
     <groupId>io.github.atos-digital-id</groupId>
     <artifactId>paprika-maven-plugin</artifactId>
-    <version>0.8.0</version>
+    <version>0.8.1</version>
   </extension>
 
 </extensions>
