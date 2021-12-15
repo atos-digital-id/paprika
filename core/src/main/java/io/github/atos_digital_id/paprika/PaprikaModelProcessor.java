@@ -56,7 +56,7 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
 
   }
 
-  private static boolean isSkipped() {
+  public static boolean isSkipped() {
 
     if( skip != null )
       return skip;

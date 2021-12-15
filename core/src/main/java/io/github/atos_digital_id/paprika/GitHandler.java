@@ -54,6 +54,9 @@ public class GitHandler extends AbstractMavenLifecycleParticipant {
   @Override
   public void afterSessionStart( MavenSession session ) throws MavenExecutionException {
 
+    if( PaprikaModelProcessor.isSkipped() )
+      return;
+
     startTime =
         ZonedDateTime.ofInstant( session.getStartTime().toInstant(), ZoneId.systemDefault() );
 
