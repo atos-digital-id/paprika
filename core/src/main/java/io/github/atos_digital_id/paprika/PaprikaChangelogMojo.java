@@ -45,6 +45,17 @@ import io.github.atos_digital_id.paprika.version.Version;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Paprika changelog Mojo. Extract pertinent commits related to a module and its
+ * dependencies and call a template engine to generate a changelo report. This
+ * mojo can be configured with:
+ * <ul>
+ * <li>{@code from}
+ * <li>{@code to}
+ * <li>{@code output}
+ * <li>{@code template}
+ * </ul>
+ **/
 @Mojo( name = PaprikaChangelogMojo.GOAL, requiresDirectInvocation = true, aggregator = true )
 public class PaprikaChangelogMojo extends AbstractMojo {
 

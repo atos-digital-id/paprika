@@ -30,10 +30,19 @@ public class ArtifactStatusExaminer {
    **/
   public enum IncrementPart {
 
+    /**
+     * Major version.
+     **/
     MAJOR,
 
+    /**
+     * Minor version.
+     **/
     MINOR,
 
+    /**
+     * Patch version.
+     **/
     PATCH;
 
   }

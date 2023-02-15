@@ -53,17 +53,21 @@ import org.apache.maven.model.Site;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/*
- * How to generate Briefs classes:
- *  * look at brief.xslt, run it and paste the result here.
- *  * Add package and import lines
- *  * Change BriefModel visibility
- *  * Change all "fake" boolean String to boolean and change getters.
- *  * Remove all unused code.
- *  * Remove all "internal utility" fields.
- *  * Remove all deprecated fields and classes.
- *  * Remove all unwanted fields:
- *    * ModelBase.modules
+/**
+ * Brief model (Maven pom model) management. How to generate Briefs classes:
+ * <ul>
+ * <li>look at brief.xslt, run it and paste the result here.
+ * <li>Add package and import lines
+ * <li>Change BriefModel visibility
+ * <li>Change all "fake" boolean String to boolean and change getters.
+ * <li>Remove all unused code.
+ * <li>Remove all "internal utility" fields.
+ * <li>Remove all deprecated fields and classes.
+ * <li>Remove all unwanted fields:
+ * <ul>
+ * <li>ModelBase.modules
+ * </ul>
+ * </ul>
  */
 public class Briefs {
 

@@ -117,6 +117,11 @@ public class ArtifactDefProvider {
 
   private final Set<ArtifactDef> defs = new HashSet<>();
 
+  /**
+   * All artifacts generated and accessible with the model tree.
+   *
+   * @return all artifacts.
+   **/
   @Getter( lazy = true )
   private final SortedSet<ArtifactDef> allDefs =
       Collections.unmodifiableSortedSet( new TreeSet<>( defs ) );

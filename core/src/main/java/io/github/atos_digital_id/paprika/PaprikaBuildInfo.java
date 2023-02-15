@@ -40,6 +40,11 @@ public class PaprikaBuildInfo {
    **/
   private final String version;
 
+  /**
+   * String representation. Format: {@code <groupId>:<artifactId>:<version>}.
+   *
+   * @return a string representation.
+   **/
   @Getter( lazy = true )
   @EqualsAndHashCode.Exclude
   private final String string = this.groupId + ":" + this.artifactId + ":" + this.version;

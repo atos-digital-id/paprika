@@ -45,6 +45,9 @@ import io.github.atos_digital_id.paprika.version.Version;
 @Singleton
 public class PaprikaModelProcessor extends DefaultModelProcessor {
 
+  /**
+   * {@code project.build.outputTimestamp}
+   **/
   public static final String TIMESTAMP_PROPERTY = "project.build.outputTimestamp";
 
   @Inject

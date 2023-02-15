@@ -7,8 +7,8 @@ import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.Ref;
 
 /**
- * Utility class to format some objects. Returned objects implements a lazy
- * {code toString} method.
+ * Utility class to format some objects for logs. Returned objects implements a
+ * lazy {code toString} method.
  **/
 public class Pretty {
 

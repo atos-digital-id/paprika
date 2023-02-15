@@ -62,6 +62,9 @@ import io.github.atos_digital_id.paprika.version.Version;
 @Mojo( name = PaprikaReleaseMojo.GOAL, requiresDirectInvocation = true, aggregator = true )
 public class PaprikaReleaseMojo extends AbstractMojo {
 
+  /**
+   * Goal of this mojo: {@code release}.
+   **/
   public static final String GOAL = "release";
 
   @Inject

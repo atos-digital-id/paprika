@@ -3,6 +3,9 @@ package io.github.atos_digital_id.paprika.utils.templating.engine.api;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Wrapper class on a {@link List} implementing a {@link CustomList}.
+ */
 public abstract class AbstractCustomList<T> implements CustomList {
 
   protected final List<T> list;

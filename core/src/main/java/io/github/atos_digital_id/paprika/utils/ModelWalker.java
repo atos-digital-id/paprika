@@ -222,16 +222,34 @@ public class ModelWalker {
    **/
   public enum GAVUsage {
 
+    /**
+     * Pom target.
+     **/
     MODEL,
 
+    /**
+     * Dependency.
+     */
     DEPENDENCY,
 
+    /**
+     * Parent.
+     **/
     PARENT,
 
+    /**
+     * Plugin.
+     **/
     PLUGIN,
 
+    /**
+     * Report plugin.
+     **/
     REPORT_PLUGIN,
 
+    /**
+     * Extension.
+     **/
     EXTENSION;
 
   }

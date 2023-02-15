@@ -54,6 +54,9 @@ import lombok.NonNull;
 @Singleton
 public class ArtifactCheckers {
 
+  /**
+   * Filename of pom file {@code "pom.xml"}.
+   **/
   public static final String POM_PATH = "pom.xml";
 
   @Inject
@@ -111,6 +114,11 @@ public class ArtifactCheckers {
 
     private final String loggedPath;
 
+    /**
+     * Create a new Checker for an artifact.
+     *
+     * @param def the associated artifact.
+     **/
     public Checker( ArtifactDef def ) {
 
       this.def = def;
