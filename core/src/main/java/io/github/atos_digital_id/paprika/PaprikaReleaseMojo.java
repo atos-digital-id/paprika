@@ -1,5 +1,7 @@
 package io.github.atos_digital_id.paprika;
 
+import static io.github.atos_digital_id.paprika.utils.templating.value.CommitValue.getPrettyNameOf;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
@@ -7,7 +9,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +27,9 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.eclipse.jgit.api.TagCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 
 import io.github.atos_digital_id.paprika.config.Config;
 import io.github.atos_digital_id.paprika.config.ConfigHandler;
@@ -88,49 +91,40 @@ public class PaprikaReleaseMojo extends AbstractMojo {
 
       ArtifactDef artifactDef = artifactDefProvider.getDef( project.getModel() );
 
-      SortedSet<ArtifactDef> scope;
-      if( releaseModules ) {
-
-        scope = searchModules( artifactDef );
-
-        Iterator<ArtifactDef> ite = scope.iterator();
-        while( ite.hasNext() ) {
-          ArtifactDef def = ite.next();
-          if( configHandler.get( def ).isReleaseIgnored() )
-            ite.remove();
-        }
-
-        scope.addAll( ArtifactDef.getAllDependencies( scope ) );
-
-      } else {
-
-        scope = new TreeSet<>();
-        scope.add( artifactDef );
-        scope.addAll( artifactDef.getAllDependencies() );
-
-      }
+      SortedSet<ArtifactDef> scope = searchModules( artifactDef );
+      scope.addAll( ArtifactDef.getAllDependencies( scope ) );
 
       List<ReleaseCommand> commands = new LinkedList<>();
 
-      for( ArtifactDef def : scope ) {
+      try( RevWalk revwalk = new RevWalk( gitHandler.repository() ) ) {
 
-        ArtifactStatus status = artifactStatusExaminer.examine( def );
-        if( !status.isSnapshot() )
-          continue;
+        for( ArtifactDef def : scope ) {
 
-        Version current = status.getVersion();
-        Version version = new Version(
-            current.getMajor(),
-            current.getMinor(),
-            current.getPatch(),
-            Version.EMPTY_STRINGS,
-            Version.EMPTY_STRINGS );
+          ArtifactStatus status = artifactStatusExaminer.examine( def );
+          if( !status.getVersion().isSnapshot() )
+            continue;
 
-        if( ObjectId.zeroId().equals( status.getLastCommit() ) )
-          throw new MojoExecutionException(
-              "The project " + def + " has modifications not yet committed." );
+          RevCommit lastCommit = status.getLastCommit();
 
-        commands.add( new ReleaseCommand( def, status, version ) );
+          if( lastCommit == null )
+            throw new MojoExecutionException(
+                "The project " + def + " has modifications not yet committed." );
+
+          if( configHandler.get( def ).isSkipTagged()
+              && lastCommitIsTagged( def, status, revwalk ) )
+            continue;
+
+          Version current = status.getVersion();
+          Version version = new Version(
+              current.getMajor(),
+              current.getMinor(),
+              current.getPatch(),
+              Version.EMPTY_STRINGS,
+              Version.EMPTY_STRINGS );
+
+          commands.add( new ReleaseCommand( def, status, version ) );
+
+        }
 
       }
 
@@ -217,6 +211,17 @@ public class PaprikaReleaseMojo extends AbstractMojo {
     }
 
     return scope;
+
+  }
+
+  private boolean lastCommitIsTagged( ArtifactDef def, ArtifactStatus status, RevWalk revwalk )
+      throws IOException {
+
+    for( Ref ref : artifactTags.getTags( def ) )
+      if( status.getLastCommit().equals( revwalk.parseCommit( ref.getObjectId() ) ) )
+        return true;
+
+    return false;
 
   }
 
