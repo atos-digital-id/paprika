@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import io.github.atos_digital_id.paprika.history.ArtifactStatusExaminer.IncrementPart;
 import io.github.atos_digital_id.paprika.utils.Patterns;
 import io.github.atos_digital_id.paprika.utils.Patterns.PathFilter;
+import io.github.atos_digital_id.paprika.utils.templating.engine.Escaper;
 import io.github.atos_digital_id.paprika.version.Version;
 import lombok.Data;
 import lombok.Getter;
@@ -341,6 +342,48 @@ public class Config {
 
   private boolean computeReleaseExec() {
     return getBoolValue( "exec", "PAPRIKA_RELEASE_EXEC", null, false );
+  }
+
+  /**
+   * Template escaper to use. Can be empty, {@code NONE}, {@code HTML} or
+   * {@code JSON}. Default value: {@code NONE}. Property name:
+   * {@code template.escaper}. Environment variable: {@code PAPRIKA_ESCAPER}.
+   * System property: {@code escaper}.
+   *
+   * @return the escaper to use.
+   */
+  @Getter( lazy = true )
+  private final Escaper escaper = computeEscaper();
+
+  private Escaper computeEscaper() {
+    String value = getConfigValue( "escaper", "PAPRIKA_ESCAPER", "template.escaper", "NONE" );
+    if( value.isEmpty() )
+      return Escaper.NONE;
+    return Enum.valueOf( Escaper.class, value.trim().toUpperCase() );
+  }
+
+  /**
+   * Extact partial template. If {@code <name>} is the name of the partial, the
+   * partial can be load from the property {@code template.partial.<name>}, or
+   * for the environment variable {@code PAPRIKA_PARTIAL_<NAME>} (where
+   * {@code <NAME>} is {@code name} in upper case), or from the system property
+   * {@code <name>}.
+   *
+   * @param name the name of the partial template.
+   * @return the partial template.
+   */
+  public String getPartialTemplate( String name ) {
+
+    String partial = null;
+    if( partial == null )
+      partial = System.getProperty( name );
+    if( partial == null )
+      partial = System.getenv( "PAPRIKA_PARTIAL_" + name.toUpperCase().replaceAll( "\\W", "_" ) );
+    if( partial == null )
+      partial = configProperties.get( dir ).get( "template.partial." + name );
+
+    return partial == null ? "" : partial;
+
   }
 
 }
