@@ -86,6 +86,18 @@ public class ArtifactTags {
   }
 
   /**
+   * Compute the complete tag name from a module id and a version. Includes
+   * {@link org.eclipse.jgit.lib.Constants#R_TAGS} as prefix.
+   *
+   * @param id the id of the module.
+   * @param version the unparsed version of the module.
+   * @return the complete tag name.
+   **/
+  public String getCompleteTag( @NonNull ArtifactId id, @NonNull String version ) {
+    return R_TAGS + id.getArtifactId() + "/" + version;
+  }
+
+  /**
    * Compute the tag name from a module id and a version. Don't include
    * {@link org.eclipse.jgit.lib.Constants#R_TAGS}.
    *
@@ -94,6 +106,18 @@ public class ArtifactTags {
    * @return the tag name.
    **/
   public String getShortTag( @NonNull ArtifactId id, @NonNull Version version ) {
+    return id.getArtifactId() + "/" + version;
+  }
+
+  /**
+   * Compute the tag name from a module id and a version. Don't include
+   * {@link org.eclipse.jgit.lib.Constants#R_TAGS}.
+   *
+   * @param id the id of the module.
+   * @param version the unparsed version of the module.
+   * @return the tag name.
+   **/
+  public String getShortTag( @NonNull ArtifactId id, @NonNull String version ) {
     return id.getArtifactId() + "/" + version;
   }
 

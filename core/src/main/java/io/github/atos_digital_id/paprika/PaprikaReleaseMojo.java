@@ -265,7 +265,7 @@ public class PaprikaReleaseMojo extends AbstractMojo {
       builder.append( " \"" ).append( tag ).append( "\"" );
 
       if( config.isReleaseLastModification() )
-        builder.append( " " ).append( status.getLastCommitAsShortString() );
+        builder.append( " " ).append( getPrettyNameOf( status.getLastCommit() ) );
 
       return builder.toString();
 

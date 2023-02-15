@@ -335,8 +335,7 @@ public class ArtifactCheckers {
 
       FileTreeIterator workingTree = new FileTreeIterator( repo );
 
-      logger
-          .log( "Compare working dir and commit {} on {}", Pretty.id( head.getId() ), loggedPath );
+      logger.log( "Compare working dir and commit {} on {}", Pretty.id( head ), loggedPath );
 
       return isModifiedIn( reader, null, source, workingTree, headTree, true );
 
@@ -367,8 +366,8 @@ public class ArtifactCheckers {
 
       logger.log(
           "Compare commit {} and {} on {}",
-          Pretty.id( commit.getId() ),
-          Pretty.id( parent.getId() ),
+          Pretty.id( commit ),
+          Pretty.id( parent ),
           loggedPath );
 
       ContentSource source = ContentSource.create( reader );

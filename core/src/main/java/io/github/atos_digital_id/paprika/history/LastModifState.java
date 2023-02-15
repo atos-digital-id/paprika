@@ -1,11 +1,8 @@
 package io.github.atos_digital_id.paprika.history;
 
-import java.time.ZonedDateTime;
-
-import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.revwalk.RevCommit;
 
 import lombok.Data;
-import lombok.NonNull;
 
 /**
  * Last modification state.
@@ -22,28 +19,10 @@ public class LastModifState {
   private final int seniority;
 
   /**
-   * Commit id of the last modification.
+   * Commit of the last modification, {@code null} if dirty.
    *
-   * @return the commit id.
+   * @return the last modifying commit.
    **/
-  @NonNull
-  private final ObjectId id;
-
-  /**
-   * Name of the commit of the last modification. {@code "HEAD"} if the module
-   * is dirty, the short commit id if not.
-   *
-   * @return the name of the commit.
-   **/
-  @NonNull
-  private final String refName;
-
-  /**
-   * Date of the commit of the last modification.
-   *
-   * @return the date of the commit.
-   **/
-  @NonNull
-  private final ZonedDateTime date;
+  private final RevCommit commit;
 
 }

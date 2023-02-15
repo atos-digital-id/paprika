@@ -95,7 +95,7 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
     logger.log( "Updating model of {} ({})", def, model );
 
     ArtifactStatus status = artifactStatusExaminer.examine( def );
-    model.setVersion( status.getVersionAsString() );
+    model.setVersion( status.getVersion().toString() );
 
     List<GAV> gavs = new ArrayList<>();
     modelWalker.visitModel( model, gavs::add );
@@ -103,7 +103,7 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
       if( isPaprikaVersion( gav ) ) {
         ArtifactDef dep = artifactDefProvider.getDef( gav.id() );
         ArtifactStatus depStatus = artifactStatusExaminer.examine( dep );
-        gav.setVersion( depStatus.getVersionAsString() );
+        gav.setVersion( depStatus.getVersion().toString() );
       }
 
     Properties properties = model.getProperties();

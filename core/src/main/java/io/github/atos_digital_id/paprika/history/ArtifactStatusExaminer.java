@@ -16,9 +16,7 @@ import io.github.atos_digital_id.paprika.utils.cache.ArtifactIdCache;
 import io.github.atos_digital_id.paprika.utils.cache.HashMapArtifactIdCache;
 import io.github.atos_digital_id.paprika.utils.log.PaprikaLogger;
 import io.github.atos_digital_id.paprika.version.Version;
-import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 
 /**
  * Computes the state and the version of a module.
@@ -71,36 +69,35 @@ public class ArtifactStatusExaminer {
 
       LastModifAndTagState state = artifactStateProvider.get( def );
       LastModifState lastModif = state.getLastModif();
+      LastTagState lastTag = state.getLastTag();
 
       // examine
 
-      if( !state.isTagged() ) {
+      if( lastTag.getCommit() == null ) {
         logger.log( "Never tagged" );
-        return snapshotStatus( def, state, lastModif );
+        return snapshotStatus( def, lastModif, lastTag );
       }
 
-      if( !state.getLastTag().getId().equals( lastModif.getId() ) ) {
+      if( !lastTag.getCommit().equals( lastModif.getCommit() ) ) {
         logger.log( "Modified since last tag" );
-        return snapshotStatus( def, state, lastModif );
+        return snapshotStatus( def, lastModif, lastTag );
       }
 
       for( ArtifactDef dependency : def.getAllDependencies() ) {
-        if( examine( dependency ).isSnapshot() ) {
+        if( examine( dependency ).getVersion().isSnapshot() ) {
           logger.log( "Modified dependency: {}", dependency );
-          return snapshotStatus( def, state, lastModif );
+          return snapshotStatus( def, lastModif, lastTag );
         }
       }
 
       logger.log( "Pristine" );
 
       return new ArtifactStatus(
-          state.getLastModif().getId(),
-          state.getLastModif().getDate(),
-          state.getLastTag().getId(),
-          state.getLastTag().getRefName(),
-          state.getLastTag().getVersion(),
-          false,
-          state.getLastTag().getVersion() );
+          lastModif.getCommit(),
+          lastTag.getCommit(),
+          lastTag.getRefName(),
+          lastTag.getVersion(),
+          lastTag.getVersion() );
 
     } finally {
       logger.restore();
@@ -110,42 +107,41 @@ public class ArtifactStatusExaminer {
 
   private ArtifactStatus snapshotStatus(
       ArtifactDef def,
-      LastModifAndTagState state,
-      LastModifState lastModif ) {
+      LastModifState lastModif,
+      LastTagState lastTag ) {
 
-    Version lastTaggedVersion = state.getLastTag().getVersion();
-    boolean isTagged = state.isTagged();
     Config config = configHandler.get( def );
 
-    List<String> prereleases = new ArrayList<>();
+    Version baseVersion = lastTag.getVersion();
 
-    prereleases.add( Version.SNAPSHOT );
+    int major, minor, patch;
+    if( baseVersion == null ) {
 
-    String branch = gitHandler.branch();
-    if( !branch.isEmpty() && configHandler.get( def ).isQualifiedBranch( branch ) )
-      prereleases.add( protectBranchName( branch ) );
+      Version initVersion = config.getInitVersion();
+      major = initVersion.getMajor();
+      minor = initVersion.getMinor();
+      patch = initVersion.getPatch();
 
-    Version initVersion = config.getInitVersion();
-    int major = initVersion.getMajor();
-    int minor = initVersion.getMinor();
-    int patch = initVersion.getPatch();
+    } else {
 
-    if( isTagged )
-      switch( this.incrementPart ) {
+      switch( config.getReleaseIncrement() ) {
 
         case MAJOR:
-          major = major + 1;
+          major = baseVersion.getMajor() + 1;
           minor = 0;
           patch = 0;
           break;
 
         case MINOR:
-          minor = minor + 1;
+          major = baseVersion.getMajor();
+          minor = baseVersion.getMinor() + 1;
           patch = 0;
           break;
 
         case PATCH:
-          patch = patch + 1;
+          major = baseVersion.getMajor();
+          minor = baseVersion.getMinor();
+          patch = baseVersion.getPatch() + 1;
           break;
 
         default:
@@ -153,6 +149,16 @@ public class ArtifactStatusExaminer {
               "Unexpected increment part: " + config.getReleaseIncrement() );
 
       }
+
+    }
+
+    List<String> prereleases = new ArrayList<>();
+
+    prereleases.add( Version.SNAPSHOT );
+
+    String branch = gitHandler.branch();
+    if( !branch.isEmpty() && config.isQualifiedBranch( branch ) )
+      prereleases.add( protectBranchName( branch ) );
 
     Version snapshotVersion = new Version(
         major,
@@ -162,12 +168,10 @@ public class ArtifactStatusExaminer {
         Version.EMPTY_STRINGS );
 
     return new ArtifactStatus(
-        lastModif.getId(),
-        lastModif.getDate(),
-        state.getLastTag().getId(),
-        lastModif.getRefName(),
-        state.getLastTag().getVersion(),
-        true,
+        lastModif.getCommit(),
+        lastTag.getCommit(),
+        lastTag.getRefName(),
+        lastTag.getVersion(),
         snapshotVersion );
 
   }

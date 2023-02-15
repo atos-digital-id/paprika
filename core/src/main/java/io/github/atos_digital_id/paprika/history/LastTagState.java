@@ -1,10 +1,9 @@
 package io.github.atos_digital_id.paprika.history;
 
-import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.revwalk.RevCommit;
 
 import io.github.atos_digital_id.paprika.version.Version;
 import lombok.Data;
-import lombok.NonNull;
 
 /**
  * Last tag state.
@@ -13,27 +12,24 @@ import lombok.NonNull;
 public class LastTagState {
 
   /**
-   * Commit id of the last tag.
+   * Commit of the last tag, {@code null} if never tagged.
    *
-   * @return the commit id.
+   * @return the last tagged commit.
    **/
-  @NonNull
-  private final ObjectId id;
+  private final RevCommit commit;
 
   /**
-   * Name of the commit of the last tag.
+   * Last tag, {@code null} if never tagged.
    *
-   * @return the name of the commit.
+   * @return the last tag.
    **/
-  @NonNull
   private final String refName;
 
   /**
-   * Version extracted from the name of the last tag.
+   * Version extracted from the last tag, {code null} if never tagged.
    *
    * @return the version.
    **/
-  @NonNull
   private final Version version;
 
 }

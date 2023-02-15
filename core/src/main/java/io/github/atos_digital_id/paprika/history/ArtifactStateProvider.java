@@ -1,37 +1,27 @@
 package io.github.atos_digital_id.paprika.history;
 
-import static org.eclipse.jgit.lib.Constants.HEAD;
-
 import java.io.IOException;
-import java.time.ZonedDateTime;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevObject;
 import org.eclipse.jgit.revwalk.RevWalk;
 
 import io.github.atos_digital_id.paprika.GitHandler;
-import io.github.atos_digital_id.paprika.config.ConfigHandler;
 import io.github.atos_digital_id.paprika.project.ArtifactDef;
 import io.github.atos_digital_id.paprika.project.ArtifactTags;
 import io.github.atos_digital_id.paprika.utils.Pretty;
 import io.github.atos_digital_id.paprika.utils.cache.ArtifactIdCache;
 import io.github.atos_digital_id.paprika.utils.cache.HashMapArtifactIdCache;
 import io.github.atos_digital_id.paprika.utils.log.PaprikaLogger;
-import io.github.atos_digital_id.paprika.version.Version;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NonNull;
 
 /**
@@ -41,6 +31,9 @@ import lombok.NonNull;
 @Singleton
 public class ArtifactStateProvider {
 
+  /**
+   * Null object id.
+   **/
   public static final ObjectId ZERO_ID = ObjectId.zeroId();
 
   @Inject
@@ -50,63 +43,23 @@ public class ArtifactStateProvider {
   private ArtifactCheckers artifactCheckers;
 
   @Inject
-  private ConfigHandler configHandler;
-
-  @Inject
   private GitHandler gitHandler;
 
   @Inject
   private ArtifactTags artifactTags;
 
-  private LastModifState dirty() {
-    return new LastModifState( 0, ZERO_ID, HEAD, gitHandler.startTime() );
-  }
+  private static final LastModifState DIRTY_STATE = new LastModifState( 0, null );
 
-  private LastModifState lastModif( int seniority, ObjectId lastMatchCommit ) {
+  private static final LastTagState NEVER_TAGGED_STATE = new LastTagState( null, null, null );
 
-    if( !ZERO_ID.equals( lastMatchCommit ) && ( lastMatchCommit instanceof RevCommit ) )
-      return new LastModifState(
-          seniority,
-          lastMatchCommit,
-          Pretty.id( lastMatchCommit ).toString(),
-          extractDate( (RevCommit) lastMatchCommit ) );
-
-    return new LastModifState( seniority, lastMatchCommit, HEAD, gitHandler.startTime() );
-
-  }
-
-  private ZonedDateTime extractDate( RevCommit commit ) {
-
-    PersonIdent committer = commit.getCommitterIdent();
-    if( committer == null )
-      committer = commit.getAuthorIdent();
-    if( committer != null ) {
-      TimeZone timeZone = committer.getTimeZone();
-      if( timeZone == null )
-        timeZone = TimeZone.getDefault();
-      Date when = committer.getWhen();
-      if( when != null )
-        return ZonedDateTime.ofInstant( when.toInstant(), timeZone.toZoneId() );
-    }
-
-    return gitHandler.startTime();
-
-  }
-
-  private LastTagState tagged( ArtifactDef def, ObjectId tagCommit, Ref tagref )
+  private LastTagState tagged( ArtifactDef def, RevCommit tagCommit, Ref tagref )
       throws IOException {
 
-    // remove refs/tags/
-    String refName = tagref.getName().substring( 10 );
+    return new LastTagState(
+        tagCommit,
+        tagref.getName().substring( 10 ), // remove refs/tags/
+        artifactTags.getVersion( def, tagref ) );
 
-    Version baseVersion = artifactTags.getVersion( def, tagref );
-
-    return new LastTagState( tagCommit, refName, baseVersion );
-
-  }
-
-  private LastTagState neverTagged( ArtifactDef def ) {
-    return new LastTagState( ZERO_ID, HEAD, configHandler.get( def ).getInitVersion() );
   }
 
   /**
@@ -124,28 +77,12 @@ public class ArtifactStateProvider {
     private final LastModifState lastModif;
 
     /**
-     * Versionned module flag.
-     *
-     * @return true if the module is versionned.
-     **/
-    @Getter( lazy = true )
-    private final boolean versionned = !ZERO_ID.equals( this.lastModif.getId() );
-
-    /**
      * Last tag state.
      *
      * @return the last tag state.
      **/
     @NonNull
     private final LastTagState lastTag;
-
-    /**
-     * Tagged module flag.
-     *
-     * @return true if the module has been tagged.
-     **/
-    @Getter( lazy = true )
-    private final boolean tagged = !ZERO_ID.equals( this.lastTag.getId() );
 
   }
 
@@ -174,7 +111,7 @@ public class ArtifactStateProvider {
       ObjectId headId = gitHandler.head();
       // no commits yet
       if( headId == null || ZERO_ID.equals( headId ) )
-        return new LastModifAndTagState( dirty(), neverTagged( def ) );
+        return new LastModifAndTagState( DIRTY_STATE, NEVER_TAGGED_STATE );
 
       RevCommit head = revWalk.parseCommit( headId );
 
@@ -208,21 +145,18 @@ public class ArtifactStateProvider {
       // test working dir
       if( lastModifState == null && checker.isDirty( revWalk, head ) ) {
         logger.log( "Dirty working dir" );
-        lastModifState = dirty();
+        lastModifState = DIRTY_STATE;
       }
+
+      // get tags of def
+      Map<RevCommit, Ref> tagsMap = new HashMap<>();
+      List<Ref> tagRefs = artifactTags.getTags( def );
+      logger.log( "Tags found: {}", Pretty.refs( tagRefs ) );
+      for( Ref ref : tagRefs )
+        tagsMap.put( revWalk.parseCommit( ref.getObjectId() ), ref );
 
       revWalk.setFirstParent( true );
       revWalk.markStart( head );
-
-      // get tags of def
-      Map<ObjectId, Ref> tagsMap = new HashMap<>();
-      List<Ref> tagRefs = artifactTags.getTags( def );
-      logger.log( "Tags found: {}", Pretty.refs( tagRefs ) );
-      for( Ref ref : tagRefs ) {
-        RevObject revObj = revWalk.parseAny( ref.getObjectId() );
-        ObjectId id = revWalk.peel( revObj ).getId();
-        tagsMap.put( id, ref );
-      }
 
       // loop on each commits
 
@@ -244,7 +178,7 @@ public class ArtifactStateProvider {
             logger.log( "Tagged with {}", lastTagState.getRefName() );
 
             if( lastModifState == null )
-              lastModifState = lastModif( currentSeniority, current );
+              lastModifState = new LastModifState( currentSeniority, current );
 
           }
 
@@ -256,7 +190,7 @@ public class ArtifactStateProvider {
 
           // modified?
           if( lastModifState == null && checker.isModifiedAt( revWalk, current ) ) {
-            lastModifState = lastModif( currentSeniority, current );
+            lastModifState = new LastModifState( currentSeniority, current );
             logger.log( "Modified" );
           }
 
@@ -276,11 +210,11 @@ public class ArtifactStateProvider {
 
       logger.log( "Never tagged" );
 
-      lastTagState = neverTagged( def );
+      lastTagState = NEVER_TAGGED_STATE;
 
       if( lastModifState == null ) {
         // should not happen
-        lastModifState = lastModif( currentSeniority, current );
+        lastModifState = new LastModifState( currentSeniority, current );
       }
 
       return new LastModifAndTagState( lastModifState, lastTagState );
