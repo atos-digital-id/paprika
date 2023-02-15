@@ -38,6 +38,9 @@ import io.github.atos_digital_id.paprika.history.ArtifactStatusExaminer;
 import io.github.atos_digital_id.paprika.project.ArtifactDef;
 import io.github.atos_digital_id.paprika.project.ArtifactDefProvider;
 import io.github.atos_digital_id.paprika.project.ArtifactTags;
+import io.github.atos_digital_id.paprika.utils.templating.engine.TemplateEngine;
+import io.github.atos_digital_id.paprika.utils.templating.value.CommitValue;
+import io.github.atos_digital_id.paprika.utils.templating.value.VersionValue;
 import io.github.atos_digital_id.paprika.version.Version;
 
 /**
@@ -320,26 +323,32 @@ public class PaprikaReleaseMojo extends AbstractMojo {
       Config config,
       Version version ) {
 
-    Map<String, String> props = new HashMap<>();
-    props.put( "groupId", def.getGroupId() );
-    props.put( "artifactId", def.getArtifactId() );
-    props.put( "packaging", def.getPackaging() );
-    def.getParent().ifPresent( parent -> {
-      props.put( "parent.groupId", parent.getGroupId() );
-      props.put( "parent.artifactId", parent.getArtifactId() );
-      props.put( "parent.packaging", parent.getArtifactId() );
+    String msg = config.getReleaseMessage();
+
+    Map<String, Object> context = new HashMap<>();
+
+    context.put( "groupId", def.getGroupId() );
+    context.put( "artifactId", def.getArtifactId() );
+    context.put( "packaging", def.getPackaging() );
+
+    def.getParent().ifPresentOrElse( parent -> {
+      context.put( "hasParent", true );
+      context.put( "parentGroupId", parent.getGroupId() );
+      context.put( "parentArtifactId", parent.getArtifactId() );
+      context.put( "parentPackaging", parent.getPackaging() );
+    }, () -> {
+      context.put( "hasParent", false );
+      context.put( "parentGroupId", "" );
+      context.put( "parentArtifactId", "" );
+      context.put( "parentPackaging", "" );
     } );
-    props.put( "version", version.toString() );
-    props.put( "lastCommit", status.getLastCommitAsString() );
-    props.put( "lastCommit.short", status.getLastCommitAsShortString() );
-    props.put( "lastModification", status.getLastModificationAsString() );
-    props.put( "previousVersion", status.getBaseVersionAsString() );
 
-    String msg = configHandler.get( def ).getReleaseMessage();
-    for( Map.Entry<String, String> entry : props.entrySet() )
-      msg = msg.replace( "${" + entry.getKey() + "}", entry.getValue() );
+    context.put( "version", VersionValue.wrap( version ) );
+    context.put( "baseVersion", VersionValue.wrap( status.getBaseVersion() ) );
 
-    return msg;
+    context.put( "lastCommit", CommitValue.wrap( gitHandler, status.getLastCommit() ) );
+
+    return TemplateEngine.execute( config, msg, context );
 
   }
 

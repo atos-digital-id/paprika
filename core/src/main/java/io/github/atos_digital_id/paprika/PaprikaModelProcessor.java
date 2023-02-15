@@ -1,6 +1,9 @@
 package io.github.atos_digital_id.paprika;
 
 import static io.github.atos_digital_id.paprika.project.ArtifactDefProvider.isPaprikaVersion;
+import static io.github.atos_digital_id.paprika.utils.templating.value.CommitValue.getNameOf;
+import static io.github.atos_digital_id.paprika.utils.templating.value.CommitValue.getPrettyNameOf;
+import static io.github.atos_digital_id.paprika.utils.templating.value.CommitValue.getStringDateOf;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,6 +24,7 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.building.DefaultModelProcessor;
 import org.apache.maven.model.building.ModelProcessor;
+import org.eclipse.jgit.revwalk.RevCommit;
 
 import io.github.atos_digital_id.paprika.config.Config;
 import io.github.atos_digital_id.paprika.config.ConfigHandler;
@@ -32,6 +36,7 @@ import io.github.atos_digital_id.paprika.project.ArtifactId;
 import io.github.atos_digital_id.paprika.utils.ModelWalker;
 import io.github.atos_digital_id.paprika.utils.ModelWalker.GAV;
 import io.github.atos_digital_id.paprika.utils.log.PaprikaLogger;
+import io.github.atos_digital_id.paprika.version.Version;
 
 /**
  * Paprika model processor modifies versions and injects properties.
@@ -108,7 +113,7 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
 
     Properties properties = model.getProperties();
     if( !properties.containsKey( TIMESTAMP_PROPERTY ) && configHandler.get( def ).isReproducible() )
-      properties.put( TIMESTAMP_PROPERTY, status.getLastModificationAsString() );
+      properties.put( TIMESTAMP_PROPERTY, getStringDateOf( git, status.getLastCommit() ) );
     addProperties( properties, null, status );
     for( ArtifactDef d : artifactDefProvider.getAllDefs() )
       addProperties( properties, d.getArtifactId(), artifactStatusExaminer.examine( d ) );
@@ -125,16 +130,26 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
   private void addProperties( Properties properties, String id, ArtifactStatus status ) {
 
     String prefix = id == null ? "paprika" : "paprika." + id;
-    properties.put( prefix + ".lastCommit", status.getLastCommitAsString() );
-    properties.put( prefix + ".lastCommit.short", status.getLastCommitAsShortString() );
-    properties.put( prefix + ".lastModification", status.getLastModificationAsString() );
-    properties.put( prefix + ".tagCommit", status.getTagCommitAsString() );
-    properties.put( prefix + ".tagCommit.short", status.getTagCommitAsShortString() );
-    properties.put( prefix + ".refName", status.getRefName() );
-    properties.put( prefix + ".baseVersion", status.getBaseVersionAsString() );
-    properties.put( prefix + ".snapshot", status.getSnapshotAsString() );
-    properties.put( prefix + ".pristine", status.getPristineAsString() );
-    properties.put( prefix, status.getVersionAsString() );
+
+    RevCommit lastCommit = status.getLastCommit();
+    properties.put( prefix + ".lastCommit", getNameOf( lastCommit ) );
+    properties.put( prefix + ".lastCommit.short", getPrettyNameOf( lastCommit ) );
+    properties.put( prefix + ".lastModification", getStringDateOf( git, lastCommit ) );
+
+    RevCommit tagCommit = status.getTagCommit();
+    properties.put( prefix + ".tagCommit", getNameOf( tagCommit ) );
+    properties.put( prefix + ".tagCommit.short", getPrettyNameOf( tagCommit ) );
+
+    String refName = status.getRefName();
+    properties.put( prefix + ".refName", refName == null ? "" : refName );
+
+    Version baseVersion = status.getBaseVersion();
+    properties.put( prefix + ".baseVersion", baseVersion == null ? "" : baseVersion.toString() );
+
+    Version version = status.getVersion();
+    properties.put( prefix + ".snapshot", Boolean.toString( version.isSnapshot() ) );
+    properties.put( prefix + ".pristine", Boolean.toString( !version.isSnapshot() ) );
+    properties.put( prefix, version.toString() );
 
   }
 
