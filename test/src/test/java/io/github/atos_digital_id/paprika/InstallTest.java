@@ -1,110 +1,50 @@
 package io.github.atos_digital_id.paprika;
 
-import static io.github.atos_digital_id.paprika.GitProjectBuilder.GROUP_ID;
 import static java.util.Arrays.asList;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 
-import org.apache.maven.it.Verifier;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
+import io.github.atos_digital_id.paprika.GitProjectBuilder.ArtifactResult;
 import io.github.atos_digital_id.paprika.GitProjectBuilder.Dep;
 import io.github.atos_digital_id.paprika.GitProjectBuilder.Plugin;
-import lombok.Data;
 
 public class InstallTest {
 
   public static final Dep ALPHA = new Dep( "alpha" );
 
-  @Data
-  public static class ArtifactResult {
-
-    private final String artifactId;
-
-    private final String version;
-
-    private final String packaging;
-
-  }
-
-  @Rule
-  public TestName name = new TestName();
-
-  private void install( ArtifactResult ... results ) throws Exception {
-
-    Path workingDir = git.getWorkingDir();
-    Path logPath = workingDir.resolve( ".log" );
-
-    Verifier verifier = new Verifier( workingDir.toString(), true );
-    verifier.setEnvironmentVariable( "PAPRIKA_LOGS", "TRACE" );
-
-    for( ArtifactResult res : results )
-      verifier.deleteArtifacts( GROUP_ID, res.getArtifactId(), res.getVersion() );
-    verifier.setLogFileName( workingDir.relativize( logPath ).toString() );
-
-    try {
-
-      verifier.executeGoal( "install" );
-
-      for( ArtifactResult res : results )
-        verifier.assertArtifactPresent(
-            GROUP_ID,
-            res.getArtifactId(),
-            res.getVersion(),
-            res.getPackaging() );
-
-      verifier.verifyErrorFreeLog();
-      verifier.resetStreams();
-
-    } finally {
-
-      if( Files.exists( logPath ) ) {
-        Files.lines( logPath ).forEach( l -> {
-          System.out.println( "[ " + name.getMethodName() + " ] " + l );
-        } );
-      } else {
-        System.out
-            .println( "[ " + name.getMethodName() + " ] --- Log file " + logPath + " not found." );
-      }
-
-    }
-
-  }
-
   private GitProjectBuilder git;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, GitAPIException {
     git = new GitProjectBuilder();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if( git != null )
       git.close();
   }
 
   @Test
-  public void testNotVersionned() throws Exception {
+  public void testNotVersionned( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "alpha", 0, null, "jar", asList(), asList(), asList() );
     git.java( ".", 0, "alpha" );
 
-    install( new ArtifactResult( "alpha", "0.1.0-SNAPSHOT", "pom" ) );
+    git.testInstall( info, new ArtifactResult( "alpha", "0.1.0-SNAPSHOT", "pom" ) );
 
   }
 
   @Test
-  public void testPristine() throws Exception {
+  public void testPristine( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "alpha", 0, null, "jar", asList(), asList(), asList() );
@@ -112,12 +52,12 @@ public class InstallTest {
     git.commit( "Init commit" );
     git.tag( "alpha/1.0.0" );
 
-    install( new ArtifactResult( "alpha", "1.0.0", "jar" ) );
+    git.testInstall( info, new ArtifactResult( "alpha", "1.0.0", "jar" ) );
 
   }
 
   @Test
-  public void testSnapshot() throws Exception {
+  public void testSnapshot( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "alpha", 0, null, "jar", asList(), asList(), asList() );
@@ -127,12 +67,12 @@ public class InstallTest {
     git.java( ".", 1, "alpha" );
     git.commit( "New alpha" );
 
-    install( new ArtifactResult( "alpha", "1.1.0-SNAPSHOT", "jar" ) );
+    git.testInstall( info, new ArtifactResult( "alpha", "1.1.0-SNAPSHOT", "jar" ) );
 
   }
 
   @Test
-  public void testDirty() throws Exception {
+  public void testDirty( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "alpha", 0, null, "jar", asList(), asList(), asList() );
@@ -141,12 +81,12 @@ public class InstallTest {
     git.tag( "alpha/1.0.0" );
     git.java( ".", 1, "alpha" );
 
-    install( new ArtifactResult( "alpha", "1.1.0-SNAPSHOT", "jar" ) );
+    git.testInstall( info, new ArtifactResult( "alpha", "1.1.0-SNAPSHOT", "jar" ) );
 
   }
 
   @Test
-  public void testGitIgnored() throws Exception {
+  public void testGitIgnored( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.write( ".gitignore", "ignored\n" );
@@ -156,12 +96,12 @@ public class InstallTest {
     git.tag( "alpha/1.0.0" );
     git.write( "src/main/java/ignored", "Ignore me.\n" );
 
-    install( new ArtifactResult( "alpha", "1.0.0", "jar" ) );
+    git.testInstall( info, new ArtifactResult( "alpha", "1.0.0", "jar" ) );
 
   }
 
   @Test
-  public void testAddModule() throws Exception {
+  public void testAddModule( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "parent", 0, null, "pom", asList( "alpha" ), asList(), asList() );
@@ -176,7 +116,8 @@ public class InstallTest {
     git.commit( "Add beta" );
     git.tag( "beta/1.1.0" );
 
-    install(
+    git.testInstall(
+        info,
         new ArtifactResult( "parent", "1.1.0", "pom" ),
         new ArtifactResult( "alpha", "1.1.0", "jar" ),
         new ArtifactResult( "beta", "1.1.0", "jar" ) );
@@ -184,7 +125,7 @@ public class InstallTest {
   }
 
   @Test
-  public void testPristineModules() throws Exception {
+  public void testPristineModules( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "parent", 0, null, "pom", asList( "alpha", "beta" ), asList(), asList() );
@@ -197,7 +138,8 @@ public class InstallTest {
     git.tag( "alpha/1.1.0" );
     git.tag( "beta/1.1.0" );
 
-    install(
+    git.testInstall(
+        info,
         new ArtifactResult( "parent", "1.1.0", "pom" ),
         new ArtifactResult( "alpha", "1.1.0", "jar" ),
         new ArtifactResult( "beta", "1.1.0", "jar" ) );
@@ -205,7 +147,7 @@ public class InstallTest {
   }
 
   @Test
-  public void testDependantModules() throws Exception {
+  public void testDependantModules( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "parent", 0, null, "pom", asList( "alpha", "beta" ), asList(), asList() );
@@ -220,7 +162,8 @@ public class InstallTest {
     git.java( "alpha", 1, "alpha" );
     git.commit( "New alpha" );
 
-    install(
+    git.testInstall(
+        info,
         new ArtifactResult( "parent", "1.1.0", "pom" ),
         new ArtifactResult( "alpha", "1.2.0-SNAPSHOT", "jar" ),
         new ArtifactResult( "beta", "1.2.0-SNAPSHOT", "jar" ) );
@@ -228,7 +171,7 @@ public class InstallTest {
   }
 
   @Test
-  public void testOutdatingModules() throws Exception {
+  public void testOutdatingModules( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "parent", 0, null, "pom", asList( "alpha", "beta" ), asList(), asList() );
@@ -244,7 +187,8 @@ public class InstallTest {
     git.commit( "New alpha" );
     git.tag( "alpha/1.2.0" );
 
-    install(
+    git.testInstall(
+        info,
         new ArtifactResult( "parent", "1.1.0", "pom" ),
         new ArtifactResult( "alpha", "1.2.0", "jar" ),
         new ArtifactResult( "beta", "1.2.0-SNAPSHOT", "jar" ) );
@@ -252,7 +196,7 @@ public class InstallTest {
   }
 
   @Test
-  public void testWrongUsage() throws Exception {
+  public void testWrongUsage( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "parent", 0, null, "pom", asList( "alpha", "beta" ), asList(), asList() );
@@ -264,7 +208,8 @@ public class InstallTest {
     git.tag( "parent/1.1.0" );
     git.tag( "beta/1.1.0" );
 
-    install(
+    git.testInstall(
+        info,
         new ArtifactResult( "parent", "1.1.0", "pom" ),
         new ArtifactResult( "alpha", "0.1.0-SNAPSHOT", "jar" ),
         new ArtifactResult( "beta", "1.2.0-SNAPSHOT", "jar" ) );
@@ -272,7 +217,7 @@ public class InstallTest {
   }
 
   @Test
-  public void testLightweightTag() throws Exception {
+  public void testLightweightTag( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "parent", 0, null, "pom", asList( "alpha", "beta" ), asList(), asList() );
@@ -287,7 +232,8 @@ public class InstallTest {
     git.java( "beta", 1, "beta" );
     git.commit( "New beta" );
 
-    install(
+    git.testInstall(
+        info,
         new ArtifactResult( "parent", "1.1.0", "pom" ),
         new ArtifactResult( "alpha", "1.1.0", "jar" ),
         new ArtifactResult( "beta", "1.2.0-SNAPSHOT", "jar" ) );
@@ -295,7 +241,7 @@ public class InstallTest {
   }
 
   @Test
-  public void testBranch() throws Exception {
+  public void testBranch( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "parent", 0, null, "pom", asList( "alpha", "beta" ), asList(), asList() );
@@ -309,7 +255,8 @@ public class InstallTest {
     git.java( "beta", 1, "beta" );
     git.commit( "New beta" );
 
-    install(
+    git.testInstall(
+        info,
         new ArtifactResult( "parent", "1.0.0", "pom" ),
         new ArtifactResult( "alpha", "0.1.0-SNAPSHOT.feature-my-great-feature", "jar" ),
         new ArtifactResult( "beta", "0.1.0-SNAPSHOT.feature-my-great-feature", "jar" ) );
@@ -317,7 +264,7 @@ public class InstallTest {
   }
 
   @Test
-  public void testFlatten() throws Exception {
+  public void testFlatten( TestInfo info ) throws Exception {
 
     Plugin flatten = new Plugin(
         "org.codehaus.mojo",
@@ -338,7 +285,8 @@ public class InstallTest {
     git.tag( "alpha/1.1.0" );
     git.tag( "beta/1.1.0" );
 
-    install(
+    git.testInstall(
+        info,
         new ArtifactResult( "parent", "1.1.0", "pom" ),
         new ArtifactResult( "alpha", "1.1.0", "jar" ),
         new ArtifactResult( "beta", "1.1.0", "jar" ) );
@@ -346,7 +294,7 @@ public class InstallTest {
   }
 
   @Test
-  public void testDetachedTargetedHead() throws Exception {
+  public void testDetachedTargetedHead( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "alpha", 0, null, "jar", asList(), asList(), asList() );
@@ -358,12 +306,14 @@ public class InstallTest {
     String commit = git.commit( "New alpha" );
     git.checkout( commit );
 
-    install( new ArtifactResult( "alpha", "1.1.0-SNAPSHOT.feature-my-great-feature", "jar" ) );
+    git.testInstall(
+        info,
+        new ArtifactResult( "alpha", "1.1.0-SNAPSHOT.feature-my-great-feature", "jar" ) );
 
   }
 
   @Test
-  public void testDetachedHead() throws Exception {
+  public void testDetachedHead( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "alpha", 0, null, "jar", asList(), asList(), asList() );
@@ -377,12 +327,12 @@ public class InstallTest {
     git.commit( "Another new alpha" );
     git.checkout( commit );
 
-    install( new ArtifactResult( "alpha", "1.1.0-SNAPSHOT." + commit, "jar" ) );
+    git.testInstall( info, new ArtifactResult( "alpha", "1.1.0-SNAPSHOT." + commit, "jar" ) );
 
   }
 
   @Test
-  public void testDashedSuffix() throws Exception {
+  public void testDashedSuffix( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "parent", 0, null, "pom", asList( "alpha", "alpha-beta" ), asList(), asList() );
@@ -397,7 +347,8 @@ public class InstallTest {
     git.java( "alpha", 1, "alpha" );
     git.commit( "New alpha" );
 
-    install(
+    git.testInstall(
+        info,
         new ArtifactResult( "parent", "1.1.0", "pom" ),
         new ArtifactResult( "alpha", "1.2.0-SNAPSHOT", "jar" ),
         new ArtifactResult( "alpha-beta", "1.2.0-SNAPSHOT", "jar" ) );
@@ -405,7 +356,7 @@ public class InstallTest {
   }
 
   @Test
-  public void testRemoveModule() throws Exception {
+  public void testRemoveModule( TestInfo info ) throws Exception {
 
     git.readme( ".", 0 );
     git.pom( ".", "parent", 0, null, "pom", asList( "alpha", "beta" ), asList(), asList() );
@@ -420,7 +371,8 @@ public class InstallTest {
     git.pom( ".", "parent", 0, null, "pom", asList( "alpha" ), asList(), asList() );
     git.rm( "beta" );
 
-    install(
+    git.testInstall(
+        info,
         new ArtifactResult( "parent", "1.1.0", "pom" ),
         new ArtifactResult( "alpha", "1.1.0", "jar" ) );
 

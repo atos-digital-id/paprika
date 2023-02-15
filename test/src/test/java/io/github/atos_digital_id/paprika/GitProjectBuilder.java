@@ -1,8 +1,12 @@
 package io.github.atos_digital_id.paprika;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
+import java.lang.reflect.Method;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,12 +15,18 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.apache.maven.shared.verifier.Verifier;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
@@ -26,11 +36,14 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.junit.jupiter.api.TestInfo;
 
 import io.github.atos_digital_id.paprika.project.ArtifactDefProvider;
+import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.Singular;
 
 public class GitProjectBuilder implements AutoCloseable {
 
@@ -176,6 +189,20 @@ public class GitProjectBuilder implements AutoCloseable {
 
   }
 
+  public void config( @NonNull String path, String ... properties ) throws IOException {
+
+    if( properties.length % 2 != 0 )
+      throw new IllegalArgumentException( "The inputs should be key/value pairs." );
+
+    Map<String, String> map = new HashMap<>();
+    for( int i = 0; i < properties.length; i += 2 ) {
+      map.put( properties[i], properties[i + 1] );
+    }
+
+    config( path, map );
+
+  }
+
   public static final String GROUP_ID = "com.paprika-test";
 
   @Data
@@ -272,6 +299,16 @@ public class GitProjectBuilder implements AutoCloseable {
   }
 
   /*
+   * Env
+   */
+
+  private final Map<String, String> envvar = new HashMap<>();
+
+  public void setEnvVar( String key, String value ) {
+    envvar.put( key, value );
+  }
+
+  /*
    * Git
    */
 
@@ -318,6 +355,128 @@ public class GitProjectBuilder implements AutoCloseable {
 
   public void checkout( @NonNull String name ) throws GitAPIException {
     git.checkout().setName( name ).call();
+  }
+
+  /*
+   * Test
+   */
+
+  public interface VerifierConsumer {
+
+    public void accept( Verifier verifier ) throws Exception;
+
+  }
+
+  public void test( TestInfo info, String goal, VerifierConsumer setup, VerifierConsumer tester )
+      throws Exception {
+
+    Path workingDir = getWorkingDir();
+    Path logPath = workingDir.resolve( ".log" );
+
+    Verifier verifier = new Verifier( workingDir.toString(), true );
+    envvar.computeIfAbsent( "PAPRIKA_LOGS", k -> "TRACE" );
+    for( Map.Entry<String, String> entry : envvar.entrySet() )
+      verifier.setEnvironmentVariable( entry.getKey(), entry.getValue() );
+
+    if( setup != null )
+      setup.accept( verifier );
+
+    verifier.setLogFileName( workingDir.relativize( logPath ).toString() );
+
+    try {
+
+      verifier.addCliArgument( goal );
+      verifier.execute();
+
+      if( tester != null )
+        tester.accept( verifier );
+
+      // verifier.verifyErrorFreeLog();
+
+    } finally {
+
+      String testName = info.getTestClass().map( Class::getSimpleName ).orElse( "---" )
+          + "/"
+          + info.getTestMethod().map( Method::getName ).orElse( "---" );
+
+      if( Files.exists( logPath ) ) {
+        Files.lines( logPath ).forEach( l -> {
+          System.out.println( "[ " + testName + " ] " + l );
+        } );
+      } else {
+        System.out.println( "[ " + testName + " ] --- Log file " + logPath + " not found." );
+      }
+
+    }
+
+  }
+
+  public void testFail( TestInfo info, String goal, VerifierConsumer setup ) throws Exception {
+
+    Path workingDir = getWorkingDir();
+    Path logPath = workingDir.resolve( ".log" );
+
+    Verifier verifier = new Verifier( workingDir.toString(), true );
+    envvar.computeIfAbsent( "PAPRIKA_LOGS", k -> "TRACE" );
+    for( Map.Entry<String, String> entry : envvar.entrySet() )
+      verifier.setEnvironmentVariable( entry.getKey(), entry.getValue() );
+
+    setup.accept( verifier );
+
+    verifier.setLogFileName( workingDir.relativize( logPath ).toString() );
+
+    try {
+
+      verifier.addCliArgument( goal );
+      assertThatThrownBy( verifier::execute );
+
+    } finally {
+
+      String testName = info.getTestClass().map( Class::getSimpleName ).orElse( "---" )
+          + "/"
+          + info.getTestMethod().map( Method::getName ).orElse( "---" );
+
+      if( Files.exists( logPath ) ) {
+        Files.lines( logPath ).forEach( l -> {
+          System.out.println( "[ " + testName + " ] " + l );
+        } );
+      } else {
+        System.out.println( "[ " + testName + " ] --- Log file " + logPath + " not found." );
+      }
+
+    }
+
+  }
+
+  @Data
+  public static class ArtifactResult {
+
+    private final String artifactId;
+
+    private final String version;
+
+    private final String packaging;
+
+  }
+
+  public void testInstall( TestInfo info, ArtifactResult ... results ) throws Exception {
+
+    test( info, "install", verifier -> {
+
+      for( ArtifactResult res : results )
+        verifier.deleteArtifacts( GROUP_ID, res.getArtifactId(), res.getVersion() );
+
+    }, verifier -> {
+
+      for( ArtifactResult res : results )
+        verifier.verifyArtifactPresent(
+            GROUP_ID,
+            res.getArtifactId(),
+            res.getVersion(),
+            res.getPackaging() );
+
+    } );
+
   }
 
 }
