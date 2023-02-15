@@ -23,6 +23,7 @@ import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryBuilder;
 
+import io.github.atos_digital_id.paprika.config.Config;
 import io.github.atos_digital_id.paprika.utils.Pretty;
 import io.github.atos_digital_id.paprika.utils.log.PaprikaLogger;
 import lombok.NonNull;
@@ -54,7 +55,7 @@ public class GitHandler extends AbstractMavenLifecycleParticipant {
   @Override
   public void afterSessionStart( MavenSession session ) throws MavenExecutionException {
 
-    if( PaprikaModelProcessor.isSkipped() )
+    if( Config.isSkipped() )
       return;
 
     startTime =

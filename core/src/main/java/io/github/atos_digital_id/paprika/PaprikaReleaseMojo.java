@@ -1,6 +1,5 @@
 package io.github.atos_digital_id.paprika;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
@@ -33,7 +32,6 @@ import io.github.atos_digital_id.paprika.config.Config;
 import io.github.atos_digital_id.paprika.config.ConfigHandler;
 import io.github.atos_digital_id.paprika.history.ArtifactStatus;
 import io.github.atos_digital_id.paprika.history.ArtifactStatusExaminer;
-import io.github.atos_digital_id.paprika.history.ArtifactStatusExaminer.IncrementPart;
 import io.github.atos_digital_id.paprika.project.ArtifactDef;
 import io.github.atos_digital_id.paprika.project.ArtifactDefProvider;
 import io.github.atos_digital_id.paprika.project.ArtifactTags;
@@ -41,7 +39,19 @@ import io.github.atos_digital_id.paprika.version.Version;
 
 /**
  * Paprika release Mojo. Can be helpful to releasing modules: it displays or
- * execute the Git commands for tagging the currently modified modules.
+ * executes the Git commands for tagging the currently modified modules. This
+ * mojo can be configured with system properties:
+ * <ul>
+ * <li>{@code lastModification}
+ * <li>{@code annotated}
+ * <li>{@code signed}
+ * <li>{@code message}
+ * <li>{@code subModules}
+ * <li>{@code increment}
+ * <li>{@code skipTagged}
+ * <li>{@code output}
+ * <li>{@code exec}
+ * </ul>
  **/
 @Mojo( name = PaprikaReleaseMojo.GOAL, requiresDirectInvocation = true, aggregator = true )
 public class PaprikaReleaseMojo extends AbstractMojo {
@@ -63,31 +73,6 @@ public class PaprikaReleaseMojo extends AbstractMojo {
   @Inject
   private ArtifactTags artifactTags;
 
-  /**
-   * Seek for sub-module to also release.
-   **/
-  @Parameter( property = "releaseModules", defaultValue = "true" )
-  private boolean releaseModules;
-
-  /**
-   * Part of version to increment. Can be {@code MAJOR}, {@code MINOR} or
-   * {@code PATCH}.
-   **/
-  @Parameter( property = "increment", defaultValue = "MINOR" )
-  private String incrementPart;
-
-  /**
-   * Write the proposed commands in a file.
-   **/
-  @Parameter( property = "outputFile" )
-  private File outputFile;
-
-  /**
-   * Execute proposed commands.
-   **/
-  @Parameter( property = "exec", defaultValue = "false" )
-  private boolean exec;
-
   @Parameter( defaultValue = "${session}", readonly = true, required = true )
   private MavenSession session;
 
@@ -99,8 +84,6 @@ public class PaprikaReleaseMojo extends AbstractMojo {
 
     try {
 
-      IncrementPart part = Enum.valueOf( IncrementPart.class, incrementPart.trim().toUpperCase() );
-      artifactStatusExaminer.setIncrementPart( part );
       gitHandler.afterSessionStart( session );
 
       ArtifactDef artifactDef = artifactDefProvider.getDef( project.getModel() );
@@ -151,10 +134,10 @@ public class PaprikaReleaseMojo extends AbstractMojo {
 
       }
 
-      if( outputFile != null ) {
-        Path path = outputFile.toPath();
-        Files.createDirectories( path.getParent() );
-        try( Writer writer = Files.newBufferedWriter( path ) ) {
+      Path output = configHandler.get().getReleaseOutput();
+      if( output != null ) {
+        Files.createDirectories( output.getParent() );
+        try( Writer writer = Files.newBufferedWriter( output ) ) {
           for( ReleaseCommand command : commands ) {
             writer.write( command.toString() );
             writer.write( System.lineSeparator() );
@@ -163,6 +146,8 @@ public class PaprikaReleaseMojo extends AbstractMojo {
       }
 
       if( !commands.isEmpty() ) {
+
+        boolean exec = configHandler.get().isReleaseExec();
 
         getLog().info( "" );
 
@@ -197,11 +182,11 @@ public class PaprikaReleaseMojo extends AbstractMojo {
 
   private SortedSet<ArtifactDef> searchModules( ArtifactDef artifactDef ) {
 
+    SortedSet<ArtifactDef> scope = new TreeSet<>();
+    scope.add( artifactDef );
+
     Set<ArtifactDef> remainings = new HashSet<>( artifactDefProvider.getAllDefs() );
     remainings.remove( artifactDef );
-
-    SortedSet<ArtifactDef> modules = new TreeSet<>();
-    modules.add( artifactDef );
 
     boolean found = true;
     while( found ) {
@@ -209,16 +194,29 @@ public class PaprikaReleaseMojo extends AbstractMojo {
       found = false;
 
       for( ArtifactDef def : new ArrayList<>( remainings ) ) {
-        if( def.getParent().map( modules::contains ).orElse( false ) ) {
+
+        if( configHandler.get( def ).isReleaseIgnored() ) {
           remainings.remove( def );
-          modules.add( def );
+          continue;
+        }
+
+        ArtifactDef parent = def.getParent().orElse( null );
+        if( parent == null || !configHandler.get( parent ).isReleaseSubModules() ) {
+          remainings.remove( def );
+          continue;
+        }
+
+        if( scope.contains( parent ) ) {
+          remainings.remove( def );
+          scope.add( def );
           found = true;
         }
+
       }
 
     }
 
-    return modules;
+    return scope;
 
   }
 
@@ -241,7 +239,7 @@ public class PaprikaReleaseMojo extends AbstractMojo {
       this.config = configHandler.get( def );
 
       this.tag = artifactTags.getShortTag( def, version );
-      this.message = getMessage( def, status, version );
+      this.message = getMessage( def, status, config, version );
 
       this.command = buildCommand();
 
@@ -253,9 +251,9 @@ public class PaprikaReleaseMojo extends AbstractMojo {
 
       builder.append( "git tag" );
 
-      if( config.isAnnotated() ) {
+      if( config.isReleaseAnnotated() ) {
 
-        if( config.isSigned() )
+        if( config.isReleaseSigned() )
           builder.append( " -s" );
         else
           builder.append( " -a" );
@@ -266,7 +264,7 @@ public class PaprikaReleaseMojo extends AbstractMojo {
 
       builder.append( " \"" ).append( tag ).append( "\"" );
 
-      if( config.isLastModification() )
+      if( config.isReleaseLastModification() )
         builder.append( " " ).append( status.getLastCommitAsShortString() );
 
       return builder.toString();
@@ -284,21 +282,21 @@ public class PaprikaReleaseMojo extends AbstractMojo {
 
         TagCommand tagCommand = gitHandler.git().tag();
 
-        if( !config.isAnnotated() ) {
+        if( !config.isReleaseAnnotated() ) {
 
           tagCommand.setAnnotated( false );
 
         } else {
 
           tagCommand.setAnnotated( true );
-          tagCommand.setSigned( config.isSigned() );
+          tagCommand.setSigned( config.isReleaseSigned() );
           tagCommand.setMessage( message );
 
         }
 
         tagCommand.setName( tag );
 
-        if( config.isLastModification() )
+        if( config.isReleaseLastModification() )
           tagCommand.setObjectId( gitHandler.repository().parseCommit( status.getLastCommit() ) );
 
         tagCommand.call();
@@ -311,7 +309,11 @@ public class PaprikaReleaseMojo extends AbstractMojo {
 
   }
 
-  private String getMessage( ArtifactDef def, ArtifactStatus status, Version version ) {
+  private String getMessage(
+      ArtifactDef def,
+      ArtifactStatus status,
+      Config config,
+      Version version ) {
 
     Map<String, String> props = new HashMap<>();
     props.put( "groupId", def.getGroupId() );

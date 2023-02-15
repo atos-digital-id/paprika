@@ -22,6 +22,7 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.model.building.DefaultModelProcessor;
 import org.apache.maven.model.building.ModelProcessor;
 
+import io.github.atos_digital_id.paprika.config.Config;
 import io.github.atos_digital_id.paprika.config.ConfigHandler;
 import io.github.atos_digital_id.paprika.history.ArtifactStatus;
 import io.github.atos_digital_id.paprika.history.ArtifactStatusExaminer;
@@ -41,41 +42,11 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
 
   public static final String TIMESTAMP_PROPERTY = "project.build.outputTimestamp";
 
-  public static final String SYSTEM_SKIP = "paprika.skip";
-
-  public static final String ENV_SKIP = "PAPRIKA_SKIP";
-
-  private static Boolean skip;
-
-  private static Boolean checkSkipValue( String value ) {
-
-    if( value == null )
-      return null;
-
-    return !value.equalsIgnoreCase( "FALSE" );
-
-  }
-
-  public static boolean isSkipped() {
-
-    if( skip != null )
-      return skip;
-
-    skip = checkSkipValue( System.getProperty( SYSTEM_SKIP ) );
-    if( skip != null )
-      return skip;
-
-    skip = checkSkipValue( System.getenv( ENV_SKIP ) );
-    if( skip != null )
-      return skip;
-
-    skip = false;
-    return skip;
-
-  }
-
   @Inject
   private PaprikaLogger logger;
+
+  @Inject
+  private GitHandler git;
 
   @Inject
   private PaprikaBuildInfo paprikaBuildInfo;
@@ -109,7 +80,7 @@ public class PaprikaModelProcessor extends DefaultModelProcessor {
 
   private Model updateModel( Model model, Map<String, ?> options ) throws IOException {
 
-    if( isSkipped() || !isPaprikaVersion( model ) )
+    if( Config.isSkipped() || !isPaprikaVersion( model ) )
       return model;
 
     Source source = (Source) options.get( ModelProcessor.SOURCE );

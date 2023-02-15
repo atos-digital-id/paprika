@@ -132,9 +132,9 @@ public class ArtifactCheckers {
 
       Config config = configHandler.get( def );
 
-      this.filter = config.getObservedPath();
+      this.filter = config.getObservedPathPredicate();
 
-      this.loggedPath = p + "/{" + config.getObservedPathValue() + "}";
+      this.loggedPath = p + "/{" + config.getObservedPath() + "}";
 
     }
 

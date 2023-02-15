@@ -1,37 +1,103 @@
 package io.github.atos_digital_id.paprika.config;
 
+import static lombok.AccessLevel.PRIVATE;
+
+import java.nio.file.Path;
+
+import io.github.atos_digital_id.paprika.history.ArtifactStatusExaminer.IncrementPart;
 import io.github.atos_digital_id.paprika.utils.Patterns;
 import io.github.atos_digital_id.paprika.utils.Patterns.PathFilter;
 import io.github.atos_digital_id.paprika.version.Version;
-import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
 
 /**
- * User configuration of a module.
+ * User configuration of a directory.
  **/
 @Data
-@Builder( toBuilder = true )
 public class Config {
+
+  @NonNull
+  @Getter( PRIVATE )
+  private final ConfigProperties configProperties;
+
+  /**
+   * Target path of the configuration.
+   *
+   * @return the path which is configured.
+   **/
+  @NonNull
+  private final Path dir;
+
+  private String getConfigValue( String sys, String env, String prop, String def ) {
+
+    String value = null;
+    if( value == null && sys != null )
+      value = System.getProperty( sys );
+    if( value == null && env != null )
+      value = System.getenv( env );
+    if( value == null && prop != null )
+      value = configProperties.get( dir ).get( prop );
+    if( value == null )
+      value = def;
+
+    return value;
+
+  }
+
+  private boolean getBoolValue( String sys, String env, String prop, boolean def ) {
+    return !"false".equalsIgnoreCase( getConfigValue( sys, env, prop, def ? "true" : "false" ) );
+  }
 
   /*
    * Core
    */
 
+  private static Boolean skip;
+
   /**
-   * Configured non qualifier branch names. With wild cards. Default value:
-   * {@code "master"}.
+   * Skip all Paprika substitution. Default value: {@code false}. Environment
+   * variable : {@code PAPRIKA_SKIP}. System property: {@code paprika.skip}.
    *
-   * @param nonQualifierBrancheNames configured qualifier branch names.
-   * @return the configured non qualifier branch names.
+   * @return {@code true} if the substitutions should be skipped.
+   */
+  public static boolean isSkipped() {
+
+    if( skip != null )
+      return skip;
+
+    String value = System.getProperty( "paprika.skip" );
+    if( value == null )
+      value = System.getenv( "PAPRIKA_SKIP" );
+
+    skip = value != null && !"false".equalsIgnoreCase( value );
+    return skip;
+
+  }
+
+  /**
+   * Non qualifier branch names. Supports wild cards. Default value:
+   * {@code "main:master"}. Property name: {@code nonQualifierBranches}.
+   * Environment variable: {@code PAPRIKA_NON_QUALIFIER_BRANCHES}. System
+   * property: {@code paprika.nonQualifierBranches}.
+   *
+   * @return the non qualifier branch names.
    **/
-  @Builder.Default
-  private final String nonQualifierBrancheNames = "main:master";
+  @Getter( lazy = true )
+  private final String nonQualifierBranches = computeNonQualifierBranches();
+
+  private String computeNonQualifierBranches() {
+    return getConfigValue(
+        "paprika.nonQualifierBranches",
+        "PAPRIKA_NON_QUALIFIER_BRANCHES",
+        "nonQualifierBranches",
+        "main:master" );
+  }
 
   /**
    * Qualified branches predicate. Test if a branch is not matched by
-   * {@link Config#getNonQualifierBrancheNames}.
+   * {@link Config#getNonQualifierBranches}.
    *
    * @return a qualified branch name predicate.
    **/
@@ -39,14 +105,14 @@ public class Config {
   private final PathFilter nonQualifiedBranchPredicate = parseNonQualifiedBranches();
 
   private PathFilter parseNonQualifiedBranches() {
-    return Patterns.pathFilter( getNonQualifierBrancheNames() );
+    return Patterns.pathFilter( getNonQualifierBranches() );
   }
 
   /**
    * Test if a branch should be qualified. Returns
    * {@code getQualifiedBranchPredicate().test( branch );}.
    *
-   * @param branch the tested branch name.
+   * @param branch the branch name to test.
    * @return if the branch should be qualified.
    **/
   public boolean isQualifiedBranch( String branch ) {
@@ -54,164 +120,227 @@ public class Config {
   }
 
   /**
-   * Configured initial version. Default value: {@code "0.1.0"}.
+   * Initial version. Default value: {@code "0.1.0"}. Property name:
+   * {@code initVersion}. Environment variable {@code PAPRIKA_INIT_VERSION}.
+   * System property: {@code paprika.initVersion}.
    *
-   * @param initVersionValue configured initial version.
-   * @return the configured initial version.
-   **/
-  @NonNull
-  @Builder.Default
-  private final String initVersionValue = "0.1.0";
-
-  /**
-   * Parsed initial version.
-   *
-   * @return initVersion parsed initial version.
+   * @return the initial version.
    **/
   @Getter( lazy = true )
   private final Version initVersion = computeInitVersion();
 
   private Version computeInitVersion() {
-    return Version.parse( getInitVersionValue() );
+    return Version.parse(
+        getConfigValue( "paprika.initVersion", "PAPRIKA_INIT_VERSION", "initVersion", "0.1.0" ) );
   }
 
   /**
-   * Configured observed path. With wild cards. Default value:
-   * {@code "pom.xml:.mvn/**:src/main/**"}.
+   * Observed path. Supports wild cards. Default value:
+   * {@code "pom.xml:.mvn/**:src/main/**"}. Property name: {@code observedPath}.
+   * Environment variable: {@code PAPRIKA_OBSERVED_PATH}. System property:
+   * {@code paprika.observedPath}.
    *
-   * @param observedPathValue configured observed path.
-   * @return the configured observed path.
+   * @return the observed path.
    **/
-  @Builder.Default
-  private final String observedPathValue = "pom.xml:.mvn/**:src/main/**";
+  @Getter( lazy = true )
+  private final String observedPath = computeObservedPath();
+
+  private String computeObservedPath() {
+    return getConfigValue(
+        "paprika.observedPath",
+        "PAPRIKA_OBSERVED_PATH",
+        "observedPath",
+        "pom.xml:.mvn/**:src/main/**" );
+  }
 
   /**
    * Observed path predicate. Test if a directory is matched by
-   * {@link Config#getObservedPathValue}.
+   * {@link Config#getObservedPath}.
    *
    * @return an observed path predicate.
    **/
   @Getter( lazy = true )
-  private final PathFilter observedPath = parseObservedPath();
+  private final PathFilter observedPathPredicate = parseObservedPath();
 
   private PathFilter parseObservedPath() {
-    return Patterns.pathFilter( getObservedPathValue() );
+    return Patterns.pathFilter( getObservedPath() );
   }
 
   /**
-   * Configured value of reproducible builds flag. Default value:
-   * {@code "true"}.
+   * Reproducible builds flag. Default value: {@code true}. Property name:
+   * {@code reproducible}. Environment variable: {@code PAPRIKA_REPRODUCIBLE}.
+   * System property: {@code paprika.reproducible}.
    *
-   * @param reproducibleValue configured value of reproducible builds flag.
-   * @return the configured value of reproducible builds flag.
-   **/
-  @NonNull
-  @Builder.Default
-  private final String reproducibleValue = "true";
-
-  /**
-   * Parsed value of reproducible builds flag. Test if
-   * {@link Config#getReproducibleValue} is different of {@code "false"} (case
-   * insensitive).
-   *
-   * @return the parsed value of reproducible builds flag.
+   * @return the reproducible builds flag.
    **/
   @Getter( lazy = true )
-  private final boolean reproducible = !"false".equalsIgnoreCase( getReproducibleValue() );
+  private final boolean reproducible = computeReproducible();
+
+  private boolean computeReproducible() {
+    return getBoolValue(
+        "paprika.reproducible",
+        "PAPRIKA_REPRODUCIBLE",
+        "paprika.reproducible",
+        true );
+  }
 
   /*
    * Release
    */
 
   /**
-   * Configured value of last modification flag. Default value: {@code "true"}.
+   * Tag last modification commit, instead of HEAD. Default value: {@code true}.
+   * Property name: {@code release.lastModification}. Environment variable:
+   * {@code PAPRIKA_RELEASE_LAST_MODIFICATION}. System property:
+   * {@code lastModification}.
    *
-   * @param lastModificationValue configured value of last modification flag.
-   * @return the configured value of last modification flag.
+   * @return the last modification flag.
    */
-  @NonNull
-  @Builder.Default
-  private final String lastModificationValue = "true";
-
-  /**
-   * Parsed value of last modification flag. Test if
-   * {@link Config#getLastModificationValue} is different of {@code "false"}
-   * (case insensitive).
-   *
-   * @return the parsed value of last modification flag.
-   **/
   @Getter( lazy = true )
-  private final boolean lastModification = !"false".equalsIgnoreCase( getLastModificationValue() );
+  private final boolean releaseLastModification = computeReleaseLastModification();
+
+  private boolean computeReleaseLastModification() {
+    return getBoolValue(
+        "lastModification",
+        "PAPRIKA_RELEASE_LAST_MODIFICATION",
+        "release.lastModification",
+        true );
+  }
 
   /**
-   * Configured value of annotated flag. Default value: {@code "true"}.
+   * Use annotated tag. Default value: {@code true}. Property name:
+   * {@code release.annotated}. Environment variable:
+   * {@code PAPRIKA_RELEASE_ANNOTATED}. System property: {@code annotated}.
    *
-   * @param annotatedValue configured value of annotated flag.
-   * @return the configured value of annotated flag.
+   * @return the annotated flag.
    */
-  @NonNull
-  @Builder.Default
-  private final String annotatedValue = "true";
+  @Getter( lazy = true )
+  private final boolean releaseAnnotated = computeReleaseAnnotated();
+
+  private boolean computeReleaseAnnotated() {
+    return getBoolValue( "annotated", "PAPRIKA_RELEASE_ANNOTATED", "release.annotated", true );
+  }
 
   /**
-   * Parsed value of annotated flag. Test if {@link Config#getAnnotatedValue} is
-   * different of {@code "false"} (case insensitive).
+   * Use signed tag. Default value: {@code false}. Property name:
+   * {@code release.signed}. Environment variable:
+   * {@code PAPRIKA_RELEASE_SIGNED}. System property: {@code signed}.
    *
-   * @param annotated parsed value of annotated flag.
-   * @return the configured value of annotated flag.
+   * @return the signed flag.
+   */
+  @Getter( lazy = true )
+  private final boolean releaseSigned = computeReleaseSigned();
+
+  private boolean computeReleaseSigned() {
+    return getBoolValue( "signed", "PAPRIKA_RELEASE_SIGNED", "release.signed", false );
+  }
+
+  /**
+   * Release message. Default value:
+   * {@code "Release &#123;&#123;artifactId&#125;&#125; &#123;&#123;version&#125;&#125;"}.
+   * Property name: {@code release.message}. Environment variable:
+   * {@code PAPRIKA_RELEASE_MESSAGE}. System property: {@code message}.
+   *
+   * @return the release message.
+   */
+  @Getter( lazy = true )
+  private final String releaseMessage = computeReleaseMessage();
+
+  private String computeReleaseMessage() {
+    return getConfigValue(
+        "message",
+        "PAPRIKA_RELEASE_MESSAGE",
+        "release.message",
+        "Release {{artifactId}} {{version}}" );
+  }
+
+  /**
+   * Ignored flag. Default value: {@code false}. Property name:
+   * {@code release.ignored}.
+   *
+   * @return the ignored flag.
+   */
+  @Getter( lazy = true )
+  private final boolean releaseIgnored = computeReleaseIgnored();
+
+  private boolean computeReleaseIgnored() {
+    return getBoolValue( null, null, "release.ignored", false );
+  }
+
+  /**
+   * Seek for sub-modules. Default value: {@code true}. Property name:
+   * {@code release.subModules}. Environment variable:
+   * {@code PAPRIKA_RELEASE_SUBMODULES}. System property: {@code subModules}.
+   *
+   * @return the sub-modules flag.
+   */
+  @Getter( lazy = true )
+  private final boolean releaseSubModules = computeReleaseSubModules();
+
+  private boolean computeReleaseSubModules() {
+    return getBoolValue( "subModules", "PAPRIKA_RELEASE_SUBMODULES", "release.subModules", true );
+  }
+
+  /**
+   * Part of version to increment. Can be {@code MAJOR}, {@code MINOR} or
+   * {@code PATCH}. Default value: {@code MINOR}. Property name:
+   * {@code release.increment}. Environment variable:
+   * {@code PAPRIKA_RELEASE_INCREMENT}. System property: {@code increment}
+   *
+   * @return the part of version to increment.
    **/
   @Getter( lazy = true )
-  private final boolean annotated = !"false".equalsIgnoreCase( getAnnotatedValue() );
+  private final IncrementPart releaseIncrement = computeReleaseIncrement();
+
+  private IncrementPart computeReleaseIncrement() {
+    String value =
+        getConfigValue( "increment", "PAPRIKA_RELEASE_INCREMENT", "release.increment", "MINOR" );
+    return Enum.valueOf( IncrementPart.class, value.trim().toUpperCase() );
+  }
 
   /**
-   * Configured value of signed flag. Default value: {@code "true"}.
+   * Skip the module if the last commit is already tagged. Default value:
+   * {@code true}. Property name: {@code release.skipTagged} Environment
+   * variable: {@code PAPRIKA_RELEASE_SKIP_TAGGED} System property:
+   * {@code skipTagged}
    *
-   * @param signedValue configured value of signed flag.
-   * @return the configured value of signed flag.
-   **/
-  @NonNull
-  @Builder.Default
-  private final String signedValue = "false";
-
-  /**
-   * Parsed value of signed flag. Test if {@link Config#getSignedValue} is
-   * different of {@code "false"} (case insensitive).
-   *
-   * @param signed parsed value of signed flag.
-   * @return the parsed value of signed flag.
+   * @return skip the module if the last commit is already tagged.
    **/
   @Getter( lazy = true )
-  private final boolean signed = !"false".equalsIgnoreCase( getSignedValue() );
+  private final boolean skipTagged = computeSkipTagged();
+
+  private boolean computeSkipTagged() {
+    return getBoolValue( "skipTagged", "PAPRIKA_RELEASE_SKIP_TAGGED", "release.skipTagged", true );
+  }
 
   /**
-   * Configured release message. Default value: {@code "Release ${artifactId}
-   * ${version}"}
+   * Write the proposed commands in a file. Property name:
+   * {@code release.output}. Environment variable:
+   * {@code PAPRIKA_RELEASE_OUTPUT}. System property: {@code output}.
    *
-   * @param releaseMessage configured release message.
-   * @return the configured release message.
-   **/
-  @NonNull
-  @Builder.Default
-  private final String releaseMessage = "Release ${artifactId} ${version}";
-
-  /**
-   * Configured value of ignored flag. Default value: {@code "false"}.
-   *
-   * @param releaseIgnoredValue configured value of ignored flag.
-   * @return the configured value of ignored flag.
-   **/
-  @NonNull
-  @Builder.Default
-  private final String releaseIgnoredValue = "false";
-
-  /**
-   * Parsed value of ignored flag. Test if {@link Config#getReleaseIgnoredValue}
-   * is different of {@code "false"} (case insensitive).
-   *
-   * @param releaseIgnored parsed value of ignored flag.
-   * @return the parsed value of ignored flag.
+   * @return the path of the output file.
    **/
   @Getter( lazy = true )
-  private final boolean releaseIgnored = !"false".equalsIgnoreCase( getReleaseIgnoredValue() );
+  private final Path releaseOutput = computeReleaseOutput();
+
+  private Path computeReleaseOutput() {
+    String value = getConfigValue( "output", "PAPRIKA_RELEASE_OUTPUT", "release.output", "" );
+    if( value.isEmpty() )
+      return null;
+    return Path.of( value ).toAbsolutePath();
+  }
+
+  /**
+   * Execute proposed commands. Default value: {@code false}. Environment
+   * variable: {@code PAPRIKA_RELEASE_EXEC}. System property: {@code exec}.
+   *
+   * @return the execution flag.
+   */
+  @Getter( lazy = true )
+  private final boolean releaseExec = computeReleaseExec();
+
+  private boolean computeReleaseExec() {
+    return getBoolValue( "exec", "PAPRIKA_RELEASE_EXEC", null, false );
+  }
 
 }

@@ -8,6 +8,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import io.github.atos_digital_id.paprika.GitHandler;
+import io.github.atos_digital_id.paprika.config.Config;
 import io.github.atos_digital_id.paprika.config.ConfigHandler;
 import io.github.atos_digital_id.paprika.history.ArtifactStateProvider.LastModifAndTagState;
 import io.github.atos_digital_id.paprika.project.ArtifactDef;
@@ -50,11 +51,6 @@ public class ArtifactStatusExaminer {
 
   @Inject
   private ArtifactStateProvider artifactStateProvider;
-
-  @Getter
-  @Setter
-  @NonNull
-  private IncrementPart incrementPart = IncrementPart.MINOR;
 
   private final ArtifactIdCache<ArtifactStatus> cache = new HashMapArtifactIdCache<>();
 
@@ -119,6 +115,7 @@ public class ArtifactStatusExaminer {
 
     Version lastTaggedVersion = state.getLastTag().getVersion();
     boolean isTagged = state.isTagged();
+    Config config = configHandler.get( def );
 
     List<String> prereleases = new ArrayList<>();
 
@@ -128,9 +125,10 @@ public class ArtifactStatusExaminer {
     if( !branch.isEmpty() && configHandler.get( def ).isQualifiedBranch( branch ) )
       prereleases.add( protectBranchName( branch ) );
 
-    int major = lastTaggedVersion.getMajor();
-    int minor = lastTaggedVersion.getMinor();
-    int patch = lastTaggedVersion.getPatch();
+    Version initVersion = config.getInitVersion();
+    int major = initVersion.getMajor();
+    int minor = initVersion.getMinor();
+    int patch = initVersion.getPatch();
 
     if( isTagged )
       switch( this.incrementPart ) {
@@ -149,6 +147,10 @@ public class ArtifactStatusExaminer {
         case PATCH:
           patch = patch + 1;
           break;
+
+        default:
+          throw new IllegalArgumentException(
+              "Unexpected increment part: " + config.getReleaseIncrement() );
 
       }
 
