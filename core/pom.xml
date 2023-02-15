@@ -162,10 +162,17 @@
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok-maven-plugin</artifactId>
         <version>1.18.20.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.24</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <id>delombok</id>
-            <phase>generate-sources</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>delombok</goal>
             </goals>
@@ -223,7 +230,7 @@
         <executions>
           <execution>
             <id>flatten</id>
-            <phase>process-resources</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>flatten</goal>
             </goals>

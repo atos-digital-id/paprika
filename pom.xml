@@ -92,7 +92,7 @@
         </configuration>
         <executions>
           <execution>
-            <phase>validate</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>validate</goal>
             </goals>
