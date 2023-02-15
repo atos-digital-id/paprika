@@ -30,7 +30,6 @@ import io.github.atos_digital_id.paprika.utils.cache.ArtifactIdCache;
 import io.github.atos_digital_id.paprika.utils.cache.HashMapArtifactIdCache;
 import io.github.atos_digital_id.paprika.utils.log.PaprikaLogger;
 import io.github.atos_digital_id.paprika.version.Version;
-import io.github.atos_digital_id.paprika.version.VersionParsingException;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
@@ -100,12 +99,7 @@ public class ArtifactStateProvider {
     // remove refs/tags/
     String refName = tagref.getName().substring( 10 );
 
-    Version baseVersion;
-    try {
-      baseVersion = artifactTags.getVersion( def, tagref );
-    } catch( VersionParsingException ex ) {
-      throw new IOException( "The tag '" + tagref + "' doesn't contains a valid version." );
-    }
+    Version baseVersion = artifactTags.getVersion( def, tagref );
 
     return new LastTagState( tagCommit, refName, baseVersion );
 

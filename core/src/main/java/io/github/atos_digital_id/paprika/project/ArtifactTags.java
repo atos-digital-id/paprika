@@ -13,7 +13,6 @@ import org.eclipse.jgit.lib.Ref;
 
 import io.github.atos_digital_id.paprika.GitHandler;
 import io.github.atos_digital_id.paprika.version.Version;
-import io.github.atos_digital_id.paprika.version.VersionParsingException;
 import lombok.NonNull;
 
 /**
@@ -44,10 +43,8 @@ public class ArtifactTags {
    * @param id the id of the module.
    * @param tag the tag name to parse.
    * @return the parsed version.
-   * @throws VersionParsingException the version can not be parsed.
    **/
-  public Version getVersion( @NonNull ArtifactId id, @NonNull String tag )
-      throws VersionParsingException {
+  public Version getVersion( @NonNull ArtifactId id, @NonNull String tag ) {
 
     int offset = 0;
 
@@ -56,8 +53,7 @@ public class ArtifactTags {
 
     String prefix = id.getArtifactId() + "/";
     if( !tag.startsWith( prefix, offset ) )
-      throw new VersionParsingException(
-          "The tag '" + tag + "' doesn't match for the artifact " + id + "." );
+      return new Version( 0, 0, 0, new String[] { Version.WRONG_TAG }, new String[] { tag } );
     offset += prefix.length();
 
     Version version = Version.parse( tag.substring( offset ) );
@@ -72,10 +68,8 @@ public class ArtifactTags {
    * @param id the id of the module.
    * @param ref the ref commit.
    * @return the parsed version.
-   * @throws VersionParsingException the version can not be parsed.
    **/
-  public Version getVersion( @NonNull ArtifactId id, @NonNull Ref ref )
-      throws VersionParsingException {
+  public Version getVersion( @NonNull ArtifactId id, @NonNull Ref ref ) {
     return getVersion( id, ref.getName() );
   }
 

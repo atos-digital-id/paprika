@@ -8,12 +8,11 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import io.github.atos_digital_id.paprika.version.Version;
-import io.github.atos_digital_id.paprika.version.VersionParsingException;
 
 public class VersionTest {
 
   @Test
-  public void testParse() throws VersionParsingException {
+  public void testParse() {
 
     assertThat( Version.parse( "1.9.0" ) )
         .isEqualTo( new Version( 1, 9, 0, new String[] {}, new String[] {} ) );
@@ -41,7 +40,7 @@ public class VersionTest {
   }
 
   @Test
-  public void testCompareEquals() throws VersionParsingException {
+  public void testCompareEquals() {
 
     Version v = Version.parse( "1.0.0-alpha+001" );
     Version w = Version.parse( "1.0.0-alpha+20130313144700" );
@@ -50,7 +49,7 @@ public class VersionTest {
 
   }
 
-  private void testCompareOrder( String ... versions ) throws VersionParsingException {
+  private void testCompareOrder( String ... versions ) {
 
     List<Version> list = new ArrayList<>( versions.length );
     for( String v : versions )
@@ -72,7 +71,7 @@ public class VersionTest {
   }
 
   @Test
-  public void testCompareOrder() throws VersionParsingException {
+  public void testCompareOrder() {
 
     testCompareOrder( "1.0.0", "2.0.0", "2.1.0", "2.1.1" );
 

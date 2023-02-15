@@ -3,7 +3,6 @@ package io.github.atos_digital_id.paprika.config;
 import io.github.atos_digital_id.paprika.utils.Patterns;
 import io.github.atos_digital_id.paprika.utils.Patterns.PathFilter;
 import io.github.atos_digital_id.paprika.version.Version;
-import io.github.atos_digital_id.paprika.version.VersionParsingException;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
@@ -70,18 +69,10 @@ public class Config {
    * @return initVersion parsed initial version.
    **/
   @Getter( lazy = true )
-  private final Version initVersion = parseInitVersionValue();
+  private final Version initVersion = computeInitVersion();
 
-  private Version parseInitVersionValue() {
-
-    try {
-      return Version.parse( getInitVersionValue() );
-    } catch( VersionParsingException ex ) {
-      throw new IllegalArgumentException(
-          "Can not parse configured first version: " + ex.getMessage(),
-          ex );
-    }
-
+  private Version computeInitVersion() {
+    return Version.parse( getInitVersionValue() );
   }
 
   /**

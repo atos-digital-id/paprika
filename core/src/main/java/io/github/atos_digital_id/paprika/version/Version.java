@@ -1,5 +1,6 @@
 package io.github.atos_digital_id.paprika.version;
 
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,6 +21,16 @@ public class Version implements Comparable<Version> {
    * {@code "SNAPSHOT"}.
    **/
   public static final String SNAPSHOT = "SNAPSHOT";
+
+  /**
+   * {@code "ILLEGAL"}.
+   **/
+  public static final String ILLEGAL = "ILLEGAL";
+
+  /**
+   * {@code "WRONG-TAG"}.
+   **/
+  public static final String WRONG_TAG = "WRONG-TAG";
 
   /**
    * Empty array of strings.
@@ -62,6 +73,19 @@ public class Version implements Comparable<Version> {
    **/
   @NonNull
   private final String[] builds;
+
+  /**
+   * Check if the version contains {@code SNAPSHOT} in the prereleases tags.
+   *
+   * @return {@code true} if the version is a SNAPSHOT
+   **/
+  @Getter( lazy = true )
+  @EqualsAndHashCode.Exclude
+  private final boolean snapshot = testSnapshot();
+
+  private boolean testSnapshot() {
+    return Arrays.asList( prereleases ).contains( SNAPSHOT );
+  }
 
   /**
    * String representation of the version.
@@ -189,23 +213,27 @@ public class Version implements Comparable<Version> {
    *
    * @param version the version to parse.
    * @return the parsed version.
-   * @throws VersionParsingException the version can not be parsed.
    **/
-  public static Version parse( @NonNull String version ) throws VersionParsingException {
+  public static Version parse( @NonNull String version ) {
 
     Matcher matcher = PATTERN.matcher( version );
-    if( !matcher.matches() )
-      throw VersionParsingException.parsing( version );
+    if( matcher.matches() ) {
 
-    int major = Integer.parseInt( matcher.group( "major" ) );
-    int minor = Integer.parseInt( matcher.group( "minor" ) );
-    int patch = Integer.parseInt( matcher.group( "patch" ) );
-    String[] prereleases =
-        Patterns.split( matcher.group( "prerelease" ), '.' ).toArray( EMPTY_STRINGS );
-    String[] builds =
-        Patterns.split( matcher.group( "buildmetadata" ), '.' ).toArray( EMPTY_STRINGS );
+      int major = Integer.parseInt( matcher.group( "major" ) );
+      int minor = Integer.parseInt( matcher.group( "minor" ) );
+      int patch = Integer.parseInt( matcher.group( "patch" ) );
+      String[] prereleases =
+          Patterns.split( matcher.group( "prerelease" ), '.' ).toArray( EMPTY_STRINGS );
+      String[] builds =
+          Patterns.split( matcher.group( "buildmetadata" ), '.' ).toArray( EMPTY_STRINGS );
 
-    return new Version( major, minor, patch, prereleases, builds );
+      return new Version( major, minor, patch, prereleases, builds );
+
+    } else {
+
+      return new Version( 0, 0, 0, new String[] { ILLEGAL }, new String[] { version } );
+
+    }
 
   }
 
