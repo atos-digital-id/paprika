@@ -544,4 +544,43 @@ public class GitProjectBuilder implements AutoCloseable {
     testFail( info, "paprika:release", verifier -> {} );
   }
 
+  @Data
+  @Builder
+  public static class ChangelogResult {
+
+    @Builder.Default
+    private final String version = "NOT-RELEASED";
+
+    @Singular
+    private final List<String> messages;
+
+  }
+
+  private static final String CHANGELOG_TEMPLATE =
+      "{{#releases}}{{#released}}{{version}}{{^}}NOT-RELEASED{{/}}:{{#changes}}{{message}}{{^@last}},{{/}}{{/changes}}{{^@last}};{{/}}{{/releases}}";
+
+  public void testChangelog( TestInfo info, VerifierConsumer setup, ChangelogResult ... results )
+      throws Exception {
+
+    String expected =
+        Stream.of( results ).map( r -> r.getVersion() + ":" + String.join( ",", r.getMessages() ) )
+            .collect( Collectors.joining( ";" ) );
+
+    envvar.computeIfAbsent( "PAPRIKA_CHANGELOG_TEMPLATE", k -> CHANGELOG_TEMPLATE );
+    envvar.computeIfAbsent( "PAPRIKA_CHANGELOG_OUTPUT", k -> "changelog.out" );
+
+    test( info, "paprika:changelog", setup, verifier -> {
+
+      Path workingDir = getWorkingDir();
+      Path outPath = workingDir.resolve( "changelog.out" );
+
+      assertThat( outPath ).exists();
+      String actual = Files.readString( outPath );
+
+      assertThat( actual ).isEqualTo( expected );
+
+    } );
+
+  }
+
 }

@@ -344,6 +344,121 @@ public class Config {
     return getBoolValue( "exec", "PAPRIKA_RELEASE_EXEC", null, false );
   }
 
+  /*
+   * Changelog
+   */
+
+  /**
+   * Changelog start (oldest commit, excluded). Can be a valid a Git reference
+   * expression or a version number of the module. If not defined, the changelog
+   * is done until the second most recent tag. Use {@code root} to generate the
+   * changelog since the start of the Git history. Default value: {@code ""}.
+   * Environment variable: {@code PAPRIKA_CHANGELOG_FROM}. System property:
+   * {@code from}.
+   *
+   * @return the changelog start
+   **/
+  @Getter( lazy = true )
+  private final String changelogFrom = computeChangelogFrom();
+
+  private String computeChangelogFrom() {
+    return getConfigValue( "from", "PAPRIKA_CHANGELOG_FROM", null, "" );
+  }
+
+  /**
+   * Changelog end (newest commit, included). Can be a valid a Git reference
+   * expression or a version number of the module. Default value: {@code HEAD}.
+   * Environment variable: {@code PAPRIKA_CHANGELOG_TO}. System property:
+   * {@code to}.
+   *
+   * @return the changelog end.
+   */
+  @Getter( lazy = true )
+  private final String changelogTo = computeChangelogTo();
+
+  private String computeChangelogTo() {
+    return getConfigValue( "to", "PAPRIKA_CHANGELOG_TO", null, "HEAD" );
+  }
+
+  /**
+   * Changelog output path. If empty, the changelog is displayed in the Maven
+   * logs, in the standard output. Default value: {@code ""}. Property name:
+   * {@code changelog.output}. Environment variable:
+   * {@code PAPRIKA_CHANGELOG_OUTPUT}. System property: {@code output}.
+   *
+   * @return the changelog output.
+   */
+  @Getter( lazy = true )
+  private final Path changelogOutput = computeChangelogOutput();
+
+  private Path computeChangelogOutput() {
+    String value = getConfigValue( "output", "PAPRIKA_CHANGELOG_OUTPUT", "changelog.output", "" );
+    if( value.isEmpty() )
+      return null;
+    return Path.of( value ).toAbsolutePath();
+  }
+
+  /**
+   * Changelog template. Default value:
+   *
+   * <pre>
+   * {{#releases}}
+   *
+   * {{#released}}
+   * # {{version}}{{#tagged}} ({{tag.when.ISO_LOCAL_DATE}}){{/}}
+   * {{^}}
+   * # Not released
+   * {{/released}}
+   *
+   * {{#changes}}
+   * {{#message.conventional}}
+   *  * [{{shortId}}] {{message.type}}{{#message.breaking}}!{{/}}: {{message.description}}
+   * {{^}}
+   *  * [{{shortId}}] {{message.firstLine}}
+   * {{/}}
+   * {{^changes}}
+   * _No change._
+   * {{/changes}}
+   * {{/releases}}
+   * </pre>
+   *
+   * Property name: {@code changelog.template}. Environment variable
+   * {@code PAPRIKA_CHANGELOG_TEMPLATE}. System property: {@code template}.
+   *
+   * @return the changelog template.
+   **/
+  @Getter( lazy = true )
+  private final String changelogTemplate = computeChangelogTemplate();
+
+  private static final String DEFAULT_CHANGELOG_TEMPLATE = String.join(
+      "\n",
+      "{{#releases}}",
+      "",
+      "{{#released}}",
+      "# {{version}}{{#tagged}} ({{tag.when.ISO_LOCAL_DATE}}){{/}}",
+      "{{^}}",
+      "# Not released",
+      "{{/released}}",
+      "",
+      "{{#changes}}",
+      "{{#message.conventional}}",
+      " * [{{shortId}}] {{message.type}}{{#message.breaking}}!{{/}}: {{message.description}}",
+      "{{^}}",
+      " * [{{shortId}}] {{message.firstLine}}",
+      "{{/}}",
+      "{{^changes}}",
+      "_No change._",
+      "{{/changes}}",
+      "{{/releases}}" );
+
+  private String computeChangelogTemplate() {
+    return getConfigValue(
+        "template",
+        "PAPRIKA_CHANGELOG_TEMPLATE",
+        "changelog.template",
+        DEFAULT_CHANGELOG_TEMPLATE );
+  }
+
   /**
    * Template escaper to use. Can be empty, {@code NONE}, {@code HTML} or
    * {@code JSON}. Default value: {@code NONE}. Property name:
