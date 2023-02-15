@@ -479,4 +479,69 @@ public class GitProjectBuilder implements AutoCloseable {
 
   }
 
+  @Data
+  @Builder
+  public static final class ReleaseResult {
+
+    private final String artifactId;
+
+    private final String version;
+
+    private final boolean signed;
+
+    private final boolean annotated;
+
+    private final String message;
+
+    private final String commit;
+
+    public static class ReleaseResultBuilder {
+
+      public ReleaseResultBuilder longCommit( String longCommit ) {
+        return this.commit( longCommit.substring( 0, 9 ) );
+      }
+
+    }
+
+  }
+
+  private static final Pattern TAG_COMMAND_PATTERN = Pattern.compile(
+      "^git tag(?<sig> -s)?(?<anno> -a)?( -m \"(?<msg>[^\"]*)\")? \"(?<artifact>[^\"]*)/(?<version>[^\"]*)\"( (?<commit>.{9}))?$" );
+
+  public void testRelease( TestInfo info, ReleaseResult ... results ) throws Exception {
+
+    envvar.computeIfAbsent( "PAPRIKA_RELEASE_OUTPUT", k -> "release.out" );
+
+    test( info, "paprika:release", verifier -> {}, verifier -> {
+
+      Set<ReleaseResult> actuals = new HashSet<>();
+
+      Path workingDir = getWorkingDir();
+      Path outPath = workingDir.resolve( "release.out" );
+
+      assertThat( outPath ).exists();
+
+      Files.lines( outPath ).forEach( l -> {
+
+        Matcher matcher = TAG_COMMAND_PATTERN.matcher( l );
+        assertThat( matcher ).matches();
+
+        actuals.add(
+            ReleaseResult.builder().artifactId( matcher.group( "artifact" ) )
+                .version( matcher.group( "version" ) ).signed( matcher.group( "sig" ) != null )
+                .annotated( matcher.group( "anno" ) != null ).message( matcher.group( "msg" ) )
+                .commit( matcher.group( "commit" ) ).build() );
+
+      } );
+
+      assertThat( actuals ).containsExactlyInAnyOrder( results );
+
+    } );
+
+  }
+
+  public void testReleaseFail( TestInfo info ) throws Exception {
+    testFail( info, "paprika:release", verifier -> {} );
+  }
+
 }
