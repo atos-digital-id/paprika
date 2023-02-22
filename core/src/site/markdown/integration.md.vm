@@ -1,0 +1,10 @@
+
+# IDE integration
+
+Generally, IDEs with integrated build system don't like Paprika very much. But you can deactivate Paprika shenanigans by setting the environment variable `PAPRIKA_SKIP` or the system property `paprika.skip` to something different of `false` (an empty value is working). You can define the system property by calling Maven with the argument `-Dpaprika.skip`.
+
+#[[## IntelliJ]]#
+
+To deactivate Paprika in IntelliJ, just add the option `-Dpaprika.skip` to your to Maven Importer VM options (File > Settings > Build, Execution, Deployment > Build Tools > Maven > Importing > VM options for importer Maven). Then you should rebuild your project (Build > Rebuild project) and synchronize Maven configuration (right click on the project > Maven > Reload project).
+
+## vim: set syntax=markdown :**

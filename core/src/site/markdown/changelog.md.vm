@@ -1,0 +1,10 @@
+
+# Changelog goal
+
+The changelog goal aggregates commits modifying a module or its dependencies.
+
+Please see [the tutorial](tutorial.html#changelog-goal) for a complete example.
+
+Please see [the configuration](configuration.html#changelog-goal) for a complete description of the configuration.
+
+## vim: set syntax=markdown :**

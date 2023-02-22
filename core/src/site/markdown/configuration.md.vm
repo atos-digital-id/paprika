@@ -1,35 +1,48 @@
 
 # Configuration
 
-The configuration files can be placed in `.mvn/paprika.properties` in the root project or in in any module directory. Each configuration entry is applied in all sub-modules, unless another file overload this configuration value for a specific module and its sub-module. Each configuration file should be in a [properties format](#[[http://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Properties.html#load(java.io.Reader)]]#). The available keys and the default values are:
+Even if the configuration process can be seen as classic, it has been redefined to be coherent and consistant in the different entry points of Paprika (default behaviour and goals). The configuration can be done in 3 ways:
+ * With configuration files placed in `.mvn/paprika.properties` in the root project or in in any module directory. Each configuration entry is applied in all sub-modules, unless another file overload this configuration value for a specific module and its sub-module. Each configuration file should be in a [properties format](#[[http://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Properties.html#load(java.io.Reader)]]#).
+ * With environment variables. This way have the precedence over the configuration files but is less flexible, since the configuration will be the same for all the modules. Nevertheless, it can be useful to temporally set up a configuration for a command, without relying on the configuration files.
+ * With system properties: maven records any argument given with `-D` or `--define` as a system property. System properties have the precedence over environment variables and configuration files.
 
-Key | Default value | Description
---- | --- | ---
-`initVersion` | `0.1.0` | First version when no tag is found (without pre-release parts).
-`observedPath` | `pom.xml:.mvn/**:src/main/**` | Observed paths of each module for modification. Always use `/` to separate directories. See wildcards support. Git ignored files (with `.gitignored` file) can not be observed.
-`nonQualifierBranches` | `main:master` | Branch names for which snapshot versions will not contain the branch name. See wildcards support.
-`reproducible` | `true` | Set the Maven property `project.build.outputTimestamp` with the date of the last modification commit.
-`release.annotated` | `true` | `release` goal: generate annotated tag commands.
-`release.lastModification` | `true` | `release` goal: propose the last modification commit (instead of `HEAD`).
-`release.message` | `Release #[[${artifactId}]]# #[[${version}]]#` | `release` goal: proposed message in annotated tag commands. See the next section to know the available placeholders.
-`release.signed` | `false` | `release` goal: if annotated, generate signed tag commands.
-`release.ignore` | `false` | `release` goal: skip this module (can be used for [test modules](http://www.thinkcode.se/blog/2012/08/21/separating-tests-in-maven)).
+Configuration keys can be categorized in three: core configuration, configuration for the goal `release` and configuration for the goal `changelog`.
 
-#[[## Message placeholders]]#
+<a name="core"/>The available keys and the default values for the core configuration are:
 
-In `release.message`, some placeholders are available:
+System property | Environment variable | Property name | Default value | Description
+--- | --- | --- | --- | ---
+`paprika.skip` | `PAPRIKA_SKIP` | &nbsp; | `false` | Skip the Paprika substitution in the `pom.xml`.
+`paprika.nonQualifierBranches` | `PAPRIKA_NON_QUALIFIER_BRANCHES` | `nonQualifierBranches` | `main:master` | Branch names for which snapshot versions will not contain the branch name. See wildcards support.
+`paprika.initVersion` | `PAPRIKA_INIT_VERSION` | `initVersion` | `0.1.0` | First version when no tag is found (without pre-release parts).
+`paprika.observedPath` | `PAPRIKA_OBSERVED_PATH` | `observedPath` | `pom.xml:.mvn/**:src/main/**` | Observed paths of each module for modification. Always use `/` to separate directories. See wildcards support. Git ignored files (with `.gitignored` file) can not be observed.
+`paprika.reproducible` | `PAPRIKA_REPRODUCIBLE` | `reproducible` | `true` | Set the Maven property `project.build.outputTimestamp` with the date of the last modification commit.
+`escaper` | `PAPRIKA_ESCAPER` | `template.escaper` | `NONE` | Template escaper to use. Can be empty, `NONE`, `HTML` or `JSON`.
+`<name>` | `PAPRIKA_PARTIAL_<NAME>` | `template.partial.<name>` | | Template partial. In the previous column, `<name>` refers to the name of the partial, and `<NAME>` refers to the same name in upper case.
 
- * `#[[${groupId}]]#`: the group id of the released module.
- * `#[[${artifactId}]]#`: the artifact id of the released module.
- * `#[[${packaging}]]#`: the packaging of the module.
- * `#[[${parent.groupId}]]#`: the group id of the parent module (if any).
- * `#[[${parent.artifactId}]]#`: the artifact id of the parent module (if any).
- * `#[[${parent.packaging}]]#`: the packaging of the parent module (if any).
- * `#[[${version}]]#`: the version that should be used for the release.
- * `#[[${lastCommit}]]#`: the last commit id (SHA1) bringing a modification in the module.
- * `#[[${lastCommit.short}]]#`: a shortened (9 characters) version of `#[[${lastCommit}]]#`.
- * `#[[${lastModification}]]#`: the date of the commit designated by `#[[${lastCommit}]]#`.
- * `#[[${previousVersion}]]#`: the last tagged version (or the configured `initVersion`).
+<a name="release-goal"/>Configuration for the `release` goal:
+
+System property | Environment variable | Property name | Default value | Description
+--- | --- | --- | --- | ---
+`lastModification` | `PAPRIKA_RELEASE_LAST_MODIFICATION` | `release.lastModification` | `true` | propose the last modification commit (instead of `HEAD`).
+`annotated` | `PAPRIKA_RELEASE_ANNOTATED` | `release.annotated` | `true` | generate annotated tag commands.
+`signed` | `PAPRIKA_RELEASE_SIGNED` | `release.signed` | `false` | if annotated, generate signed tag commands.
+`message` | `PAPRIKA_RELEASE_MESSAGE` | `release.message` | `Release #[[{{artifactId}}]]# #[[{{version}}]]#` | proposed message in annotated tag commands. See [the template section](template.html#release-goal) for knowing the available placeholders.
+&nbsp; | &nbsp; | `release.ignore` | `false` | skip this module (can be used for [test modules](http://www.thinkcode.se/blog/2012/08/21/separating-tests-in-maven)).
+`subModules` | `PAPRIKA_RELEASE_SUBMODULES` | `release.subModules` | `true` | also generate commands to release sub modules.
+`increment` | `PAPRIKA_RELEASE_INCREMENT` | `release.increment` | `MINOR` | part of version to increment. Can be `MAJOR`, `MINOR` or `PATCH`.
+`skipTagged` | `PAPRIKA_RELEASE_SKIP_TAGGED` | `release.skipTagged` | `true` | skip the module if the last modifying commit is already tagged.
+`output` | `PAPRIKA_RELEASE_OUTPUT` | `release.output` | &nbsp; | write the proposed commands in a file. If not defined, the commands are display in the Maven log.
+`exec` | `PAPRIKA_RELEASE_EXEC` | &nbsp; | `false` | execute the proposed commands.
+
+<a name="changelog-goal"/>Configuration for the `changelog` goal:
+
+System property | Environment variable | Property name | Default value | Description
+--- | --- | --- | --- | ---
+`from` | `PAPRIKA_CHANGELOG_FROM` | &nbsp; | &nbsp; | Changelog start (oldest commit, excluded). Can be a valid a Git reference expression or a version number of the module. If not defined, the changelog is done until the second most recent tag. Use `root` to generate the changelog since the start of the Git history.
+`to` | `PAPRIKA_CHANGELOG_TO` | &nbsp; | `HEAD` | Changelog end (newest commit, included). Can be a valid a Git reference expression or a version number of the module.
+`output` | `PAPRIKA_CHANGELOG_OUTPUT` | `changelog.output` | &nbsp; | Changelog output path. If empty, the changelog is displayed in the Maven logs.
+`template` | `PAPRIKA_CHANGELOG_TEMPLATE` | `changelog.template` | _see [template](template.html#changelog-goal)_ | Changelog template.
 
 #[[## Wildcards support]]#
 

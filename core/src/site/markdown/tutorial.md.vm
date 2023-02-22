@@ -56,7 +56,7 @@ During the creation of `alpha` project, Maven archetype automatically updates th
 
 We represent in theses schemas the computed version in blue for each module of the project and for each commit. In another words, the versions in blue was the computed versions of your modules when the branch reference was at the specific commit. To check quickly what versions are provided by Paprika at your current commit, you can simply do:
 ```bash
-mvn clean
+mvn validate
 ```
 
 #[[## First releases]]#
@@ -71,7 +71,7 @@ The Git history and the computed versions become:
 
 ![first tags](images/asy/tuto_first_tag.svg)
 
-As you can guess, the tags are labeled in green in the schema. Nothing to modify in the `pom` files: you can check that Paprika has detected theses tags with another `mvn clean`.
+As you can guess, the tags are labeled in green in the schema. Nothing to modify in the `pom` files: you can check that Paprika has detected theses tags with another `mvn validate`.
 
 #[[## Development process and another release]]#
 
@@ -80,7 +80,7 @@ Let's modify our alpha project:
 sed -i 's/World/Everybody/' alpha/src/main/java/com/hypatia/App.java
 ```
 
-Our working directory is now _dirty_, which means some modifications has not been committed. You can check that the computed version of the `alpha` project is now `1.1.0-SNAPSHOT` with `mvn clean`. Paprika always checks if there are any modification in the working directory, or in the index, or in the commits since the last tag to determine if the module is _pristine_ or _modified_. Since only `alpha` is modified, the version of `parent` is not updated and stay at `1.0.0`.
+Our working directory is now _dirty_, which means some modifications has not been committed. You can check that the computed version of the `alpha` project is now `1.1.0-SNAPSHOT` with `mvn validate`. Paprika always checks if there are any modification in the working directory, or in the index, or in the commits since the last tag to determine if the module is _pristine_ or _modified_. Since only `alpha` is modified, the version of `parent` is not updated and stay at `1.0.0`.
 
 We are continuing our development process, with some commits and another release of `alpha` project:
 ```bash
@@ -114,7 +114,7 @@ xmlstarlet edit -L -N x="http://maven.apache.org/POM/4.0.0" \
 # Commit
 git commit -am "[E] Adding bug"
 ```
-As always, you can run `mvn clean` to see what are the current version of the modules.
+As always, you can run `mvn validate` to see what are the current version of the modules.
 
 Since `parent` is modified, it's new version is now `1.1.0-SNAPSHOT`. `pom.xml` files are somehow different from Java code: some modifications can be ignored by Paprika, like changing order of a list (properties, dependencies, ...) or adding a module. But modifying a dependency, or adding or changing a property is not a trivial change, a lot of the building process can depend on that. So Paprika trigger an upgrade of the version.
 
@@ -226,7 +226,7 @@ Why and how using branches? [GitLab wrote a great article](http://docs.gitlab.co
 
 By using Paprika, and if no correction are needed during a release process, some commits can be empty, and skipped. That's a scenario we choose to display by omitting a commit in the `release` branch between `006` and `007`. But above all, since commits `004` and `007` are not in history of any commits of the `develop`, the computed versions by Paprika stay at the default version in the `develop` branch. Up to you to decide if it's an issue or not, depending your habits and integration and deployment workflows, but clearly Paprika is more adapted to simpler [GitHub flow](http://guides.github.com/introduction/flow/index.html) or [Atlassian flow](http://www.atlassian.com/blog/git/simple-git-workflow-is-simple), which are used in this tutorial.
 
-#[[## The `release` goal]]#
+#[[## <a name="release-goal"/>The `release` goal]]#
 
 How to know which module can be released or which module should be release? In this tutorial, the situation were simple and easily manageable. But in the real world, doing that by hand means we need to keep track of the dependency and the feature implemented to retrieve which module that should be released, an activity which can be a little cumbersome. But the `release` goal is here to help.
 
@@ -240,7 +240,7 @@ If you launch the command `mvn paprika:release`, you should see the Git commands
 ```
 Of course the final commit id can be different if you have reproduced yourself this tutorial.
 
-`alpha` and `beta` are listed here because they are modified, and also because they are modules of `parent`: the `release` goal search if the current project (here `parent`) and any sub-modules need to be release. It can be useful in some cases to discard these sub-modules, which can be achieve with `mvn paprika:release -DreleaseModules=false`. In our case, since `parent` doesn't need to be released, the command displays:
+`alpha` and `beta` are listed here because they are modified, and also because they are modules of `parent`: the `release` goal search if the current project (here `parent`) and any sub-modules need to be release. It can be useful in some cases to discard these sub-modules, which can be achieve with `mvn paprika:release -DsubModules=false`. In our case, since `parent` doesn't need to be released, the command displays:
 ```
 [INFO]
 [INFO] Nothing to release
@@ -269,6 +269,39 @@ mvn paprika:release -Dexec
 ![exec](images/asy/tuto_release_goal_exec.svg)
 
 As you can see, Paprika has tag the commit `H` for `alpha` but `I` for `beta`. If you don't want these feature and only get commands tagging `HEAD`, just add the property `release.lastModification=false` in the configuration file.
+
+#[[<a name="changelog-goal"/>The `changelog` goal]]#
+
+The changelog goal has been design to _help_ the redaction of changelog and release notes. Please note that the word "help" has been emphasized, meaning that the goal only produces a base, a draft, of what will be the official changelog of your products.
+
+The usage of the goal is pretty forward: for example, to get the commits associated to the modul `alpha`, run the command `mvn paprika:changelog -pl alpha`. In the Maven logs, you should see something like that:
+```
+[INFO]
+[INFO] # 1.2.0 (2022-07-31)
+[INFO]
+[INFO]  * [007d09b91] [E] Adding bug
+[INFO]  * [90eff572b] [H] Merging experimental/tiger
+[INFO]
+```
+
+Note that the commit `[G]` is missing, since Paprika tracked the Git history by following only the first parent commit, skipping the branch content completely.
+
+By default, the goal will show you the commits not yet released (nothing here) and the last release. You can change what release you want with the system properties `from` and `to`. For example, `mvn paprika:changelog -pl alpha -Dfrom=1.0.0 -Dto=1.2.0`:
+```
+[INFO]
+[INFO] # 1.2.0 (2022-07-31)
+[INFO]
+[INFO]  * [007d09b91] [E] Adding bug
+[INFO]  * [d0f0a65b8] [H] Merging experimental/tiger
+[INFO]
+[INFO] # 1.1.0 (2022-07-31)
+[INFO]
+[INFO]  * [afced139c] [C] Include aliens
+[INFO]  * [e4e43beaf] [D] Include alien lovers
+[INFO]
+```
+
+The template used to render the release can be configured (see [configuration](configuration.html#changelog-goal)), and the commit messages which are following the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) (which is not the case in this tutorial) are parsed and fragments can be handled and exposed in the template (see [Commit Message in Template](template.html#commit-message)).
 
 #[[## Conclusion]]#
 

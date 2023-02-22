@@ -27,9 +27,12 @@
     <menu name="Overview">
       <item name="Introduction" href="index.html"/>
       <item name="Installation" href="installation.html"/>
+      <item name="IDE integration" href="integration.html"/>
       <item name="How it works" href="how_it_works.html"/>
       <item name="Configuration" href="configuration.html"/>
-      <item name="Goals" href="plugin-info.html"/>
+      <item name="Template engine" href="template.html"/>
+      <item name="Release goal" href="release.html"/>
+      <item name="Changelog goal" href="changelog.html"/>
       <item name="Tutorial" href="tutorial.html"/>
       <item name="License" href="https://www.gnu.org/licenses/lgpl-3.0-standalone.html"/>
     </menu>

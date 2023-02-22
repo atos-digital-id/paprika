@@ -1,0 +1,10 @@
+
+# Release goal
+
+The release goal is helpful to release a module and its dependencies: it determines which commit should be tagged, with which version, for each concerned module.
+
+Please see [the tutorial](tutorial.html#release-goal) for a complete example.
+
+Please see [the configuration](configuration.html#release-goal) for a complete description of the configuration.
+
+## vim: set syntax=markdown :**
