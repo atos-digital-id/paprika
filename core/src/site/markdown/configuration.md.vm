@@ -28,7 +28,7 @@ System property | Environment variable | Property name | Default value | Descrip
 `annotated` | `PAPRIKA_RELEASE_ANNOTATED` | `release.annotated` | `true` | generate annotated tag commands.
 `signed` | `PAPRIKA_RELEASE_SIGNED` | `release.signed` | `false` | if annotated, generate signed tag commands.
 `message` | `PAPRIKA_RELEASE_MESSAGE` | `release.message` | `Release #[[{{artifactId}}]]# #[[{{version}}]]#` | proposed message in annotated tag commands. See [the template section](template.html#release-goal) for knowing the available placeholders.
-&nbsp; | &nbsp; | `release.ignore` | `false` | skip this module (can be used for [test modules](http://www.thinkcode.se/blog/2012/08/21/separating-tests-in-maven)).
+&nbsp; | &nbsp; | `release.ignored` | `false` | skip this module (can be used for [test modules](http://www.thinkcode.se/blog/2012/08/21/separating-tests-in-maven)).
 `subModules` | `PAPRIKA_RELEASE_SUBMODULES` | `release.subModules` | `true` | also generate commands to release sub modules.
 `increment` | `PAPRIKA_RELEASE_INCREMENT` | `release.increment` | `MINOR` | part of version to increment. Can be `MAJOR`, `MINOR` or `PATCH`.
 `skipTagged` | `PAPRIKA_RELEASE_SKIP_TAGGED` | `release.skipTagged` | `true` | skip the module if the last modifying commit is already tagged.
