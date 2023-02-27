@@ -20,6 +20,12 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
 
+/**
+ * Wrapper around a commit message, parsing it as a
+ * <a href="https://www.conventionalcommits.org/en/v1.0.0/">Conventional
+ * Commit</a> to expose the different parts. Footer's values are splitted with
+ * one value by line, then merged if several footers share the same key.
+ **/
 @Data
 @Builder
 public class CommitMessageValue {
@@ -35,15 +41,21 @@ public class CommitMessageValue {
   private static final Pattern CONVENTIONAL_FIRST_PATTERN = Pattern.compile(
       "(?<type>[^(!:\\s]+)\\s*(\\((?<scope>[^)]+)\\))?\\s*(?<breaking>!?)\\s*:\\s*(?<desc>.*)" );
 
-  static private final String BREAKING_CHANGE = "BREAKING CHANGE";
+  private static final String BREAKING_CHANGE = "BREAKING CHANGE";
 
-  static private final String BREAKING_CHANGE_TIRET = "BREAKING-CHANGE";
+  private static final String BREAKING_CHANGE_TIRET = "BREAKING-CHANGE";
 
   private static String canonicFooterKey( @NonNull Object key ) {
     String k = key.toString().trim().toUpperCase();
     return k.equals( BREAKING_CHANGE ) ? BREAKING_CHANGE_TIRET : k;
   }
 
+  /**
+   * Create a new {@code CommitMessageValue} wrapping the given commit message.
+   *
+   * @param message the commit message.
+   * @return a new {@code CommitMessageValue}.
+   **/
   public static CommitMessageValue wrap( @NonNull String message ) {
 
     CommitMessageValue.CommitMessageValueBuilder builder = CommitMessageValue.builder();
@@ -122,32 +134,55 @@ public class CommitMessageValue {
 
   }
 
+  /**
+   * The complete commit message.
+   *
+   * @return the complete message.
+   **/
   @NonNull
   private final String full;
 
+  /**
+   * The first line a the commit message. The end of line characters are not
+   * included.
+   *
+   * @return the first line.
+   */
   @NonNull
   private final String firstLine;
 
+  /**
+   * Check if the message is conventional (following the Conventional Commit
+   * convention).
+   *
+   * @return {@code true} if the message is conventional.
+   */
   @Builder.Default
   private final boolean isConventional = false;
 
+  /**
+   * Extract the type of the message, if the message is conventional.
+   */
   @NonNull
   @Builder.Default
   private final String type = "";
 
+  /**
+   * Wrapper around scopes.
+   */
   public static class ScopeValue extends AbstractCustomStringList {
 
-    public static String canonic( String scope ) {
+    private static String canonic( String scope ) {
       return scope.toLowerCase().trim();
     }
 
-    public static List<String> canonicSplit( String scopes ) {
+    private static List<String> canonicSplit( String scopes ) {
       if( scopes == null || scopes.isBlank() )
         return Collections.emptyList();
       return canonic( Arrays.asList( scopes.split( "," ) ) );
     }
 
-    public static List<String> canonic( List<String> scopes ) {
+    private static List<String> canonic( List<String> scopes ) {
       if( scopes == null )
         return Collections.emptyList();
       List<String> list = new ArrayList<>( scopes.size() );
@@ -169,21 +204,48 @@ public class CommitMessageValue {
 
   }
 
+  /**
+   * Extract scope element, if the message is conventional. Several scopes can
+   * be defined, separated be commas.
+   *
+   * @return a representation of the scopes, if any.
+   */
   @NonNull
   @Builder.Default
   private final ScopeValue scope = new ScopeValue( Collections.emptyList() );
 
+  /**
+   * Check if the message alerts about a breaking change, if the message is
+   * conventional. A message is alerting about a breaking change if ther is a
+   * bang after the type and the scopes, of if a footer is defined the key
+   * {@code BREAKING CHANGE} or {@code BREAKING-CHANGE} (case insensitive).
+   *
+   * @return {@code true} if the message is alerting about a breaking change.
+   */
   @Getter( lazy = true )
   private final boolean breaking = getFooter().isBreaking();
 
+  /**
+   * Returns the description part, if the message is conventional.
+   *
+   * @return the description.
+   */
   @NonNull
   @Builder.Default
   private final String description = "";
 
+  /**
+   * Returns the body part, if the message is conventional.
+   *
+   * @return the body.
+   */
   @NonNull
   @Builder.Default
   private final String body = "";
 
+  /**
+   * Wrapper around a footer (key/values).
+   **/
   @Data
   public static class FooterValue extends AbstractCustomList<String> implements
       Comparable<FooterValue> {
@@ -193,8 +255,18 @@ public class CommitMessageValue {
       this.key = key;
     }
 
+    /**
+     * Key of the footer (upper case).
+     *
+     * @return the key of the footer.
+     **/
     private final String key;
 
+    /**
+     * Check if the footer describes a breaking change.
+     *
+     * @return {@code true} if the footer describes a breaking change.
+     **/
     @Getter( lazy = true )
     private final boolean breaking = key.equals( BREAKING_CHANGE_TIRET );
 
@@ -235,6 +307,9 @@ public class CommitMessageValue {
 
   }
 
+  /**
+   * Iterable list of footers.
+   */
   public static class FooterListValue extends AbstractCustomList<FooterValue> {
 
     public FooterListValue( List<FooterValue> footers ) {
@@ -243,21 +318,39 @@ public class CommitMessageValue {
 
   }
 
+  /**
+   * Footers of the message, if the message is conventional, wrapped in an
+   * iterable list.
+   *
+   * @return iterable list of the footers.
+   */
   @NonNull
   @Builder.Default
   private final FooterListValue footers = new FooterListValue( Collections.emptyList() );
 
+  /**
+   * Map key/value for footer access.
+   */
   public static class FooterMapValue extends AbstractCustomMap<FooterValue> {
 
     public FooterMapValue( Map<String, FooterValue> footers ) {
       super( footers, CommitMessageValue::canonicFooterKey, ": ", System.lineSeparator() );
     }
 
+    /**
+     * Check if a footer alerts about a breaking change.
+     *
+     * @return {@code true} if a footer is alerting about a breaking change.
+     */
     @Getter( lazy = true )
     private final boolean breaking = map.values().stream().anyMatch( FooterValue::isBreaking );
 
   }
 
+  /**
+   * Footers of the message, if the message is conventional, wrapped in a map
+   * indexed by the key of the footer.
+   */
   @Getter( lazy = true )
   private final FooterMapValue footer = computeFooterMap();
 
@@ -273,6 +366,13 @@ public class CommitMessageValue {
 
   }
 
+  /**
+   * Return the first line of the comment. For the complete message, see
+   * {@link getFull}.
+   *
+   * @return the first line of the comment.
+   * @see getFirstLine
+   */
   @Override
   public String toString() {
     return firstLine;
